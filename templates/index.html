@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>台股查詢</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif; margin: 0; background: #f4f6f9; color: #222; -webkit-text-size-adjust: 100%; }
+  header { background: #1e3a5f; color: #fff; padding: 12px 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  header h1 { font-size: 18px; margin: 0 10px 0 0; }
+  .search-group { display: flex; gap: 6px; flex: 1 1 240px; }
+  .search-group input { flex: 1; min-width: 110px; padding: 8px 10px; border: none; border-radius: 6px; font-size: 14px; }
+  .search-group button { padding: 8px 12px; border: none; border-radius: 6px; background: #f0a500; color: #fff; cursor: pointer; font-size: 14px; white-space: nowrap; font-weight: bold; }
+  button:hover { opacity: .85; }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 14px 16px; }
+  .card { background: #fff; border-radius: 10px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); min-width: 0; }
+  .full { grid-column: 1 / -1; }
+  .top-section-left, .top-section-right { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .chart-card { flex: 1; display: flex; flex-direction: column; min-height: 220px; }
+  .chart-card .chart-container { flex: 1; width: 100%; min-height: 200px; position: relative; }
+  .settle-bar { background: #fff; border-radius: 10px; padding: 12px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); min-width: 0; }
+  .us-market-card { flex: 1; display: flex; flex-direction: column; }
+  .us-market-card .settle-grid { flex: 1; }
+  .settle-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px; }
+  .settle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 8px; }
+  .settle-col { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; }
+  .settle-col h4 { margin: 0 0 6px 0; font-size: 13px; color: #334155; display: flex; justify-content: space-between; align-items: center; }
+  .settle-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; font-size: 13px; gap: 6px; }
+  .settle-item:last-child { border-bottom: none; }
+  .badge { padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: bold; color: #fff; display: inline-block; white-space: nowrap; }
+  .badge-today { background: #e53e3e; }
+  .badge-soon { background: #dd6b20; }
+  .badge-normal { background: #4a5568; }
+  .price { font-size: 36px; font-weight: bold; margin: 4px 0; }
+  .up { color: #d32f2f; } .down { color: #2e7d32; }
+  .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 100%; }
+  td, th { border-bottom: 1px solid #eee; padding: 6px 8px; text-align: left; white-space: nowrap; }
+  .inst-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-top: 8px; }
+  .fund-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .fund-h { margin: 6px 0; font-size: 14px; color: #334155; }
+  .val-strip { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 12px; }
+  .val-pill { background: #f1f5f9; border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+  .val-pill b { font-size: 16px; color: #1e3a5f; margin-left: 4px; }
+  .evt-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; margin-bottom: 6px; border-radius: 8px; background: #f8fafc; border-left: 4px solid #94a3b8; font-size: 14px; }
+  .evt-item.conf { border-left-color: #1e88e5; }
+  .evt-item.report { border-left-color: #e53e3e; }
+  .evt-item.deadline { border-left-color: #f0a500; }
+  .evt-date { font-weight: 700; white-space: nowrap; min-width: 92px; }
+  .evt-body { flex: 1; min-width: 0; }
+  .evt-cell { white-space: normal; min-width: 180px; }
+  .chart-container { position: relative; width: 100%; min-height: 200px; }
+  #report { max-height: 600px; overflow-y: auto; overflow-x: auto; font-size: 14px; line-height: 1.6; }
+  #report table { display: block; overflow-x: auto; white-space: nowrap; margin: 10px 0; }
+  #report a.wl { color: #1565c0; cursor: pointer; text-decoration: none; border-bottom: 1px dashed; }
+  .tip-term { cursor: help; border-bottom: 1.5px dotted #64748b; font-weight: 600; color: #1e3a5f; }
+  .tip-term:hover { color: #d32f2f; border-bottom-color: #d32f2f; }
+  .muted { color: #888; font-size: 12px; }
+  .link { color: #1565c0; cursor: pointer; text-decoration: underline; }
+  pre { white-space: pre-wrap; font-size: 12px; background: #f6f6f6; padding: 8px; border-radius: 6px; overflow-x: auto; }
+  
+  @media (max-width: 820px) {
+    header { padding: 10px 12px; }
+    header h1 { font-size: 17px; width: 100%; margin-bottom: 4px; }
+    .search-group { width: 100%; flex: 1 1 100%; }
+    main { grid-template-columns: 1fr; padding: 10px 12px; gap: 12px; }
+    .settle-grid { grid-template-columns: 1fr; }
+    .inst-layout { grid-template-columns: 1fr; }
+    .fund-grid { grid-template-columns: 1fr; }
+    .card { padding: 12px 14px; }
+    .price { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>📈 台股查詢</h1>
+  <div class="search-group">
+    <input id="code" value="2330" placeholder="代號或名稱，如 2330 / 中美晶">
+    <button onclick="lookup()">查股價</button>
+  </div>
+  <div class="search-group">
+    <input id="kw" placeholder="題材關鍵字，如 CoWoS">
+    <button onclick="search()">找相關公司</button>
+  </div>
+</header>
+<main>
+  <div id="searchView" class="card full" style="display:none;"></div>
+  <div id="mainDashboard" style="display:contents;">
+    <!-- 左側：個股報價與走勢圖 -->
+    <div class="top-section-left">
+      <div class="card" id="quote"><p class="muted">輸入股票代號開始查詢</p></div>
+      <div class="card chart-card"><div class="chart-container"><canvas id="chart"></canvas></div></div>
+    </div>
+
+    <!-- 右側：市場波動率 (VIX)、台股期貨結算日與美股重大事件/七巨頭財報預告 -->
+    <div class="top-section-right">
+      <div class="settle-bar vix-card" style="border-left: 4px solid #ea580c;">
+        <div class="settle-header">
+          <h3 style="margin:0; font-size:15px;">⚡ 市場波動率指數（VIX 恐慌指標）</h3>
+          <span class="muted" style="font-size:11px;">&lt;15 平穩 · 15~20 謹慎 · 20~25 警戒 · &gt;25 避險恐慌</span>
+        </div>
+        <div id="vixBox" class="settle-grid">
+          <div class="muted" style="font-size:13px; padding:6px 0;">載入中…</div>
+        </div>
+      </div>
+      <div class="settle-bar">
+        <div class="settle-header">
+          <h3 style="margin:0; font-size:15px;">📅 台股期貨／選擇權結算日（當週與下週速覽）</h3>
+          <span class="muted">週選、月結算、摩台 (遇假順延)</span>
+        </div>
+        <div id="settle" class="muted">載入中…</div>
+      </div>
+      <div class="settle-bar us-market-card" style="border-left: 4px solid #1e3a5f;">
+        <div class="settle-header">
+          <h3 style="margin:0; font-size:15px;">🌐 美股近兩週重大事件 & 科技七巨頭財報預告</h3>
+          <span class="muted">FOMC、通膨、Mag 7 財報日程（同步標註台灣時間）</span>
+        </div>
+        <div id="usMarketBox" class="settle-grid">
+          <div class="settle-col">
+            <h4><span>🏛️ 美國重大宏觀事件</span><span class="muted" style="font-size:11px;">FOMC / 通膨 / 就業</span></h4>
+            <div id="usMacroList" class="muted" style="font-size:13px; flex:1;">載入中…</div>
+          </div>
+          <div class="settle-col">
+            <h4><span>👑 科技七巨頭 (Mag 7) 財報日</span><span class="muted" style="font-size:11px;">FMP 即時更新</span></h4>
+            <div id="usMag7List" class="muted" style="font-size:13px; flex:1;">載入中…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div class="card full" style="border-top: 3px solid #1e3a5f;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+      <h3 style="margin:0; font-size:16px;">🌊 全球央行 M2 貨幣供給與流動性水庫（FRED 官方即時連線）</h3>
+      <span class="muted" style="font-size:12px;">資料來源：FRED (Federal Reserve Bank of St. Louis) · 快取 12 小時</span>
+    </div>
+    <div id="m2Strip" class="val-strip" style="margin-top:10px;">載入中…</div>
+    <div class="fund-grid">
+      <div>
+        <h4 class="fund-h">🇺🇸 美國 M2 貨幣供給額 (十億美元) 與年增率 %（近 2 年）</h4>
+        <div class="chart-container" style="min-height:230px;"><canvas id="m2Chart"></canvas></div>
+      </div>
+      <div>
+        <h4 class="fund-h">🏛️ 全球主要央行印鈔水庫資產年增率 YoY %（Fed / ECB / BOJ 放水 vs 緊縮）</h4>
+        <div class="chart-container" style="min-height:230px;"><canvas id="cbChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div class="card full">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+      <h3 style="margin:0">三大法人買賣超（近 20 交易日，單位：張）</h3>
+      <span class="muted" style="font-size:12px;">💡 股價走勢已標記：🎯 臺指月結算 · 🌏 富時結算 · 🏛️ 美國重大財經 · 📢 法說會 · 📋 財報 · 👑 七巨頭財報 (游標懸停即看事件詳情)</span>
+    </div>
+    <div id="instMsg" class="muted" style="margin:6px 0;">—</div>
+    <div class="inst-layout">
+      <div class="chart-container"><canvas id="instChart"></canvas></div>
+      <div id="instTable" class="table-responsive" style="max-height:300px;"></div>
+    </div>
+  </div>
+  <div class="card full">
+    <h3 style="margin-top:0">🗓 財報日與法說會</h3>
+    <div id="evtMsg" class="muted">—</div>
+    <div id="evtBox" style="display:none">
+      <h4 class="fund-h">🔜 未來事件</h4>
+      <div id="evtUpcoming"></div>
+      <div class="fund-grid" style="margin-top:14px">
+        <div>
+          <h4 class="fund-h">過去財報公布日</h4>
+          <div id="evtReports" class="table-responsive" style="max-height:280px"></div>
+        </div>
+        <div>
+          <h4 class="fund-h">過去法說會（近 12 個月）</h4>
+          <div id="evtConfs" class="table-responsive" style="max-height:280px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card full">
+    <h3 style="margin-top:0">📊 基本面（FinMind）</h3>
+    <div id="fundMsg" class="muted">—</div>
+    <div id="fundBox" style="display:none">
+      <div id="valStrip" class="val-strip"></div>
+      <div class="fund-grid">
+        <div>
+          <h4 class="fund-h">月營收（億元）與年增率</h4>
+          <div class="chart-container"><canvas id="revChart"></canvas></div>
+        </div>
+        <div>
+          <h4 class="fund-h">近 8 季 EPS（元）</h4>
+          <div class="chart-container"><canvas id="epsChart"></canvas></div>
+        </div>
+        <div>
+          <h4 class="fund-h">本益比 / 股價淨值比（近 1 年）</h4>
+          <div class="chart-container"><canvas id="perChart"></canvas></div>
+        </div>
+        <div>
+          <h4 class="fund-h">股利紀錄</h4>
+          <div id="divTable" class="table-responsive" style="max-height:240px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card full">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <h3 style="margin:0">My-TW-Coverage 研究報告</h3>
+      <button id="updBtn" style="display:none;padding:6px 12px;font-size:13px;" onclick="updateVal()">更新估值 (yfinance)</button>
+    </div>
+    <div id="updLog"></div>
+    <div id="report" class="muted">—</div>
+  </div>
+  </div> <!-- end mainDashboard -->
+</main>
+
+<footer style="margin: 10px 16px 30px; padding: 16px 20px; background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.6; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.04);">
+  <div style="font-weight: bold; color: #334155; margin-bottom: 6px; font-size: 13px;">⚠️ 投資免責聲明 (Disclaimer)</div>
+  <div>本網站所載之一切行情數據、歷史圖表、籌碼統計、總經指標與研究報告，均彙整自網路公開資訊或第三方開源資料庫，僅供學術研究、個人學習與投資參考，<b>絕不構成任何形式之投資建議、推薦、買賣要約或獲利保證</b>。</div>
+  <div style="margin-top: 4px;">證券投資具備市場風險，過去績效不代表未來表現。投資人應獨立審慎評估，自行承擔所有投資風險與盈虧責任。本站對任何因資訊疏漏、傳輸延遲或程式計算錯誤所致之損失，概不承擔任何法律責任。</div>
+  <div style="margin-top: 8px; font-size: 11px; color: #94a3b8;">資料來源：TWSE · TPEX · TAIFEX · MOPS · FRED · FinMind · FMP · yfinance · My-TW-Coverage (MIT License)</div>
+</footer>
+
+<script>
+let chart, current, historyData = null, instData = null;
+const $ = id => document.getElementById(id);
+const num = v => (v === undefined || v === null || v === '-') ? '-' : v;
+
+async function lookup(inputQuery) {
+  const query = (inputQuery || $('code').value).trim();
+  if (!query) return;
+
+  // 1. 立即清除舊的輪詢定時器，防止前一檔股票 (如 2330) 定時更新蓋過新查詢
+  clearInterval(window._timer);
+
+  // 2. 立即更新當前代號與搜尋欄位
+  current = query;
+  $('code').value = query;
+
+  // 3. 切換回主儀表板畫面並捲動至頂部
+  $('searchView').style.display = 'none';
+  $('mainDashboard').style.display = 'contents';
+  window.scrollTo(0, 0);
+
+  $('quote').innerHTML = '查詢中…'; $('report').innerHTML = '載入中…'; $('updLog').innerHTML = '';
+  if (chart) chart.destroy();
+  if (instChart) instChart.destroy();
+
+  // 4. 透過 quote API 同時解析股票代號（若是中文名稱則反查代號，支援 yfinance/興櫃備援）
+  let d;
+  try {
+    const r = await fetch(`/api/quote/${encodeURIComponent(query)}`);
+    d = await r.json();
+  } catch (err) {
+    d = { error: '伺服器連線異常' };
+  }
+
+  let realCode = query;
+  if (d && !d.error) {
+    realCode = d.code;
+    $('code').value = `${realCode} ${d.name}`;
+    current = realCode;
+    renderQuote(d);
+
+    // 只有具有盤中即時報價的標的才啟動 30 秒輪詢
+    if (d.price && d.price !== '-' && !(d.fullname || '').includes('非盤中')) {
+      window._timer = setInterval(() => loadQuote(realCode), 30000);
+    }
+  } else {
+    // 若即時行情無法取得，仍顯示代號與提示，絕不中斷下方報告與財務數據載入
+    $('quote').innerHTML = `
+      <h2 style="margin:0;font-size:20px;">${esc(query)}</h2>
+      <p class="down">${esc(d?.error || '查無盤中即時資料')}</p>
+      <p class="muted" style="font-size:13px;">下方將繼續為您載入研究報告、基本面財務與日程資訊。</p>`;
+  }
+
+  // 5. 載入歷史股價、研究報告、三大法人、基本面與日程
+  loadHistory(realCode);
+  loadReport(realCode);
+  loadInst(realCode);
+  loadFundamentals(realCode);
+  loadEvents(realCode);
+}
+
+function renderQuote(d) {
+  const price = parseFloat(d.price), open = parseFloat(d.open);
+  const cls = isNaN(price) || isNaN(open) ? '' : price >= open ? 'up' : 'down';
+  const noticeHtml = d.notice ? `<div style="font-size:12px; color:#b45309; background:#fef3c7; border:1px solid #fde68a; padding:6px 10px; border-radius:4px; margin-top:8px;">ℹ️ ${esc(d.notice)}</div>` : '';
+  const isRealtime = d.price && d.price !== '-' && !(d.fullname || '').includes('非盤中');
+  $('quote').innerHTML = `
+    <h2 style="margin:0;font-size:20px;">${d.code} ${d.name} <span class="muted" style="font-size:13px;">${d.fullname || ''}</span></h2>
+    <div class="price ${cls}">${num(d.price)}</div>
+    <div class="table-responsive">
+      <table>
+        <tr><th>開盤</th><td>${num(d.open)}</td><th>最高</th><td>${num(d.high)}</td></tr>
+        <tr><th>最低</th><td>${num(d.low)}</td><th>累積量(張)</th><td>${num(d.volume)}</td></tr>
+        <tr><th>買價</th><td>${num(d.bid[0])}</td><th>賣價</th><td>${num(d.ask[0])}</td></tr>
+      </table>
+    </div>
+    <p class="muted" style="margin-top:6px;">時間：${d.time}${isRealtime ? '（每 30 秒自動更新）' : ''}</p>
+    ${noticeHtml}`;
+}
+
+async function loadQuote(code) {
+  const r = await fetch(`/api/quote/${code}`); const d = await r.json();
+  if (!d.error && current === code) {
+    renderQuote(d);
+  }
+}
+
+function renderHistoryChart() {
+  if (!historyData || !historyData.dates) return;
+  if (chart) chart.destroy();
+  const dates = historyData.dates;
+  const closes = historyData.close;
+
+  // 計算每個日期的重大事件標記 (點樣式與半徑)
+  const pointStyles = [];
+  const pointRadii = [];
+  const pointHoverRadii = [];
+  const pointBgColors = [];
+  const pointBorderColors = [];
+  const pointBorderWidths = [];
+
+  dates.forEach(dStr => {
+    const evts = getEventsForDate(dStr);
+    if (evts.length > 0) {
+      const hasMonthlySettle = evts.some(e => e.type === 'monthly_settle');
+      const hasFtseSettle = evts.some(e => e.type === 'ftse_settle');
+      const hasMacro = evts.some(e => e.type === 'macro');
+      const hasMag7 = evts.some(e => e.type === 'mag7');
+      const hasStockEvt = evts.some(e => e.type === 'stock' || e.type === 'conf' || e.type === 'report');
+
+      let fillColor = '#f59e0b'; // 預設琥珀金
+      if (hasMonthlySettle) fillColor = '#e11d48'; // 臺指月結算：強烈玫瑰紅
+      else if (hasFtseSettle) fillColor = '#0284c7'; // 富時結算：湛藍色
+      else if (hasMacro) fillColor = '#dc2626'; // 宏觀大事件：紅色
+      else if (hasStockEvt) fillColor = '#16a34a'; // 個股法說/財報：綠色
+      else if (hasMag7) fillColor = '#9333ea'; // 七巨頭：紫色
+
+      pointStyles.push('circle');
+      pointRadii.push(7.5);
+      pointHoverRadii.push(11);
+      pointBgColors.push(fillColor);
+      pointBorderColors.push('#ffffff');
+      pointBorderWidths.push(2);
+    } else {
+      pointStyles.push('circle');
+      pointRadii.push(2.5);
+      pointHoverRadii.push(5);
+      pointBgColors.push('#1e3a5f');
+      pointBorderColors.push('#1e3a5f');
+      pointBorderWidths.push(1);
+    }
+  });
+
+  chart = new Chart($('chart'), {
+    type: 'line',
+    data: {
+      labels: dates.map(d => d.slice(5).replace('-', '/')),
+      datasets: [{
+        label: '收盤價 (近 31 交易日)',
+        data: closes,
+        borderColor: '#1e3a5f',
+        backgroundColor: '#1e3a5f',
+        borderWidth: 2,
+        pointStyle: pointStyles,
+        pointRadius: pointRadii,
+        pointHoverRadius: pointHoverRadii,
+        pointBackgroundColor: pointBgColors,
+        pointBorderColor: pointBorderColors,
+        pointBorderWidth: pointBorderWidths,
+        tension: .2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true },
+        tooltip: {
+          callbacks: {
+            title: function(items) {
+              if (!items.length) return '';
+              const idx = items[0].dataIndex;
+              const dStr = dates[idx];
+              return `${dStr} (${dStr.slice(5).replace('-', '/')})`;
+            },
+            afterBody: function(items) {
+              if (!items.length) return [];
+              const idx = items[0].dataIndex;
+              const dStr = dates[idx];
+              const evts = getEventsForDate(dStr);
+              if (!evts.length) return [];
+              const lines = ['----------------------------', '📌 當日重要財經 / 法說事件：'];
+              evts.forEach(e => {
+                lines.push(` ${e.icon} ${e.label} ${e.detail || ''}`);
+              });
+              return lines;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+async function loadHistory(code) {
+  const r = await fetch(`/api/history/${code}`); const d = await r.json();
+  if (chart) chart.destroy();
+  if (d.error) { historyData = null; return; }
+  historyData = d;
+  renderHistoryChart();
+  if (instData && instData.code === code) renderInstChart();
+}
+
+const VAL_TIPS = {
+  'Forward P/E': '預估本益比 (Forward Price-to-Earnings)：股價 / 分析師預估未來 12 個月每股盈餘 (EPS)。反映市場對未來獲利成長的估值預期。',
+  'P/E (TTM)': '滾動本益比 (Trailing Twelve Months P/E)：股價 / 過去四季累計每股盈餘 (EPS)。最常用的歷史本益比指標。',
+  'P/S (TTM)': '市銷率 / 股價營收比 (Price-to-Sales TTM)：市值 / 過去四季營業收入。適合評估尚未穩定獲利或高成長期的科技/新創公司。',
+  'P/B': '股價淨值比 (Price-to-Book)：股價 / 每股淨資產。衡量股價是否偏離公司資產價值，常用於重資產或景氣循環股。',
+  'EV/EBITDA': '企業價值倍數 (Enterprise Value / EBITDA)：(市值 + 總負債 - 現金) / 未計利息、稅項、折舊及攤銷前利潤。消除資本結構與折舊政策差異，常用於跨國或跨資本結構之併購估值比較。'
+};
+
+async function loadReport(code) {
+  const r = await fetch(`/api/report/${code}`); const d = await r.json();
+  $('updBtn').style.display = d.error ? 'none' : 'inline-block';
+  if (d.error) { $('report').innerHTML = d.error; return; }
+  let md = d.markdown.replace(/\[\[([^\]]+)\]\]/g, (_, w) => `<a class="wl" data-kw="${w}">${w}</a>`);
+  
+  // 為估值指標注入 tooltip 注釋
+  for (const [term, tip] of Object.entries(VAL_TIPS)) {
+    const escaped = term.replace(/([()\\\/])/g, '\\$1');
+    const reg = new RegExp(`(?<=[|\\s])(${escaped})(?=[|\\s])`, 'g');
+    md = md.replace(reg, `<span class="tip-term" title="${tip}">$1</span>`);
+  }
+
+  $('report').classList.remove('muted');
+  $('report').innerHTML = `<p class="muted">${d.sector} / ${d.file}</p>` + marked.parse(md);
+}
+
+async function search(kw) {
+  kw = (kw || $('kw').value).trim();
+  if (!kw) return;
+  $('kw').value = kw;
+
+  // 隱藏主查詢儀表板，切換為「整頁搜尋結果」模式
+  $('mainDashboard').style.display = 'none';
+  const sView = $('searchView');
+  sView.style.display = 'block';
+  sView.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
+      <h2 style="margin:0; font-size:20px;">🔍 題材搜尋：「${esc(kw)}」</h2>
+      <button style="padding:6px 14px; font-size:13px; background:#475569;" onclick="closeSearch()">✕ 關閉搜尋回主畫面</button>
+    </div>
+    <div class="muted">資料庫搜尋比對中，請稍候…</div>`;
+
+  window.scrollTo(0, 0);
+
+  const d = await (await fetch(`/api/search?q=${encodeURIComponent(kw)}`)).json();
+  sView.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #e2e8f0; padding-bottom:8px; flex-wrap:wrap; gap:8px;">
+      <div>
+        <h2 style="margin:0; font-size:20px; display:inline-block; margin-right:8px;">🔍 題材搜尋：「${esc(kw)}」</h2>
+        <span class="badge badge-normal" style="font-size:13px;">共找到 ${d.results.length} 家關聯公司</span>
+      </div>
+      <button style="padding:6px 14px; font-size:13px; background:#475569;" onclick="closeSearch()">✕ 關閉搜尋回主畫面</button>
+    </div>
+    <p class="muted" style="margin-top:0;">點擊下方任一「股票代號」連結，將立即帶入並整頁重新載入該檔股票完整行情、籌碼與報告：</p>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr style="background:#f1f5f9;">
+            <th style="padding:10px 8px;">股票代號</th>
+            <th>公司名稱</th>
+            <th>所屬產業</th>
+            <th>提及次數</th>
+            <th>相關內文片段</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${d.results.map(x => `
+            <tr>
+              <td>
+                <a href="javascript:void(0)" class="link" style="font-weight:bold; font-size:15px;" onclick="lookup('${esc(x.code)}')">
+                  👉 ${esc(x.code)}
+                </a>
+              </td>
+              <td><b>${esc(x.name)}</b></td>
+              <td><span class="muted">${esc(x.sector)}</span></td>
+              <td><span class="badge ${x.tagged ? 'badge-today' : 'badge-normal'}">${x.count}${x.tagged ? ' (重點標籤)' : ''}</span></td>
+              <td class="muted" style="font-size:13px; white-space:normal; min-width:240px; line-height:1.5;">${esc(x.snippet)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function closeSearch() {
+  $('searchView').style.display = 'none';
+  $('mainDashboard').style.display = 'contents';
+}
+
+let instChart;
+let globalMarketData = null, eventsData = null, settlementData = null;
+const signed = v => `<span class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${v > 0 ? '+' : ''}${v.toLocaleString()}</span>`;
+
+function getEventsForDate(dateStr) {
+  const evts = [];
+
+  // 1. 臺指期貨月結算日 & 富時台灣（摩台）結算日
+  if (settlementData && settlementData.events) {
+    settlementData.events.forEach(s => {
+      if (s.date === dateStr) {
+        (s.events || []).forEach(eName => {
+          if (eName.includes('月結算')) {
+            evts.push({ type: 'monthly_settle', icon: '🎯', label: '台股期貨月結算（臺指期/臺指選）', detail: '' });
+          } else if (eName.includes('富時') || eName.includes('摩台')) {
+            evts.push({ type: 'ftse_settle', icon: '🌏', label: '富時台灣結算（SGX 摩台指）', detail: '' });
+          }
+        });
+      }
+    });
+  }
+
+  // 2. 美國重大宏觀事件
+  if (globalMarketData && globalMarketData.macro) {
+    globalMarketData.macro.forEach(m => {
+      if (m.date === dateStr) {
+        evts.push({ type: 'macro', icon: '🏛️', label: `美總經: ${m.event}`, detail: m.tw_time ? `(台: ${m.tw_time})` : '' });
+      }
+    });
+  }
+
+  // 3. 科技七巨頭 (Mag 7) 財報
+  if (globalMarketData && globalMarketData.mag7) {
+    globalMarketData.mag7.forEach(m => {
+      if (m.date === dateStr) {
+        evts.push({ type: 'mag7', icon: '👑', label: `Mag7: ${m.symbol} 財報`, detail: m.price ? `\$${m.price}` : '' });
+      }
+    });
+  }
+
+  // 4. 個股法說會與財報日
+  if (eventsData) {
+    (eventsData.upcoming || []).forEach(e => {
+      if (e.date === dateStr) {
+        const icon = e.type === '法說會' ? '📢' : '📋';
+        evts.push({ type: 'stock', icon, label: `${e.type}: ${e.title || ''}`, detail: e.time ? `(${e.time})` : '' });
+      }
+    });
+    (eventsData.past_conferences || []).forEach(e => {
+      if (e.date === dateStr) {
+        evts.push({ type: 'conf', icon: '📢', label: `法說會: ${e.place || ''}`, detail: e.time ? `(${e.time})` : '' });
+      }
+    });
+    (eventsData.past_reports || []).forEach(e => {
+      if (e.date === dateStr) {
+        evts.push({ type: 'report', icon: '📋', label: `財報公布: ${e.period || ''}`, detail: e.time ? `(${e.time})` : '' });
+      }
+    });
+  }
+
+  return evts;
+}
+
+function renderInstChart() {
+  if (!instData || !instData.rows) return;
+  if (instChart) instChart.destroy();
+  const r = instData.rows;
+
+  // 對齊歷史股價資料 (依日期 YYYY-MM-DD)
+  const priceMap = {};
+  if (historyData && historyData.dates) {
+    historyData.dates.forEach((d, i) => { priceMap[d] = historyData.close[i]; });
+  }
+  const priceSeries = r.map(x => priceMap[x.date] !== undefined ? priceMap[x.date] : null);
+
+  // 計算每個日期的重大事件標記 (點樣式與半徑)
+  const pointStyles = [];
+  const pointRadii = [];
+  const pointHoverRadii = [];
+  const pointBgColors = [];
+  const pointBorderColors = [];
+  const pointBorderWidths = [];
+
+  r.forEach(x => {
+    const evts = getEventsForDate(x.date);
+    if (evts.length > 0) {
+      // 有事件：特別凸顯大標記
+      const hasMonthlySettle = evts.some(e => e.type === 'monthly_settle');
+      const hasFtseSettle = evts.some(e => e.type === 'ftse_settle');
+      const hasMacro = evts.some(e => e.type === 'macro');
+      const hasMag7 = evts.some(e => e.type === 'mag7');
+      const hasStockEvt = evts.some(e => e.type === 'stock' || e.type === 'conf' || e.type === 'report');
+
+      let fillColor = '#f59e0b'; // 預設琥珀金色
+      if (hasMonthlySettle) fillColor = '#e11d48'; // 臺指月結算：強烈玫瑰紅
+      else if (hasFtseSettle) fillColor = '#0284c7'; // 富時結算：湛藍色
+      else if (hasMacro) fillColor = '#dc2626'; // 宏觀大事件：紅色
+      else if (hasStockEvt) fillColor = '#16a34a'; // 個股法說/財報：綠色
+      else if (hasMag7) fillColor = '#9333ea'; // 七巨頭：紫色
+
+      pointStyles.push('circle');
+      pointRadii.push(7.5);
+      pointHoverRadii.push(11);
+      pointBgColors.push(fillColor);
+      pointBorderColors.push('#ffffff');
+      pointBorderWidths.push(2);
+    } else {
+      // 一般交易日：小點
+      pointStyles.push('circle');
+      pointRadii.push(3);
+      pointHoverRadii.push(5);
+      pointBgColors.push('#e53e3e');
+      pointBorderColors.push('#e53e3e');
+      pointBorderWidths.push(1);
+    }
+  });
+
+  instChart = new Chart($('instChart'), {
+    data: {
+      labels: r.map(x => x.date.slice(5).replace('-', '/')),
+      datasets: [
+        {
+          type: 'line',
+          label: '收盤價 (元)',
+          data: priceSeries,
+          borderColor: '#e53e3e',
+          backgroundColor: '#e53e3e',
+          borderWidth: 2,
+          pointStyle: pointStyles,
+          pointRadius: pointRadii,
+          pointHoverRadius: pointHoverRadii,
+          pointBackgroundColor: pointBgColors,
+          pointBorderColor: pointBorderColors,
+          pointBorderWidth: pointBorderWidths,
+          tension: 0.2,
+          yAxisID: 'yPrice'
+        },
+        {
+          type: 'bar',
+          label: '外資',
+          data: r.map(x => x.foreign),
+          backgroundColor: '#1e88e5',
+          stack: 'inst',
+          yAxisID: 'yVol'
+        },
+        {
+          type: 'bar',
+          label: '投信',
+          data: r.map(x => x.trust),
+          backgroundColor: '#f0a500',
+          stack: 'inst',
+          yAxisID: 'yVol'
+        },
+        {
+          type: 'bar',
+          label: '自營商',
+          data: r.map(x => x.dealer),
+          backgroundColor: '#8e24aa',
+          stack: 'inst',
+          yAxisID: 'yVol'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            title: function(items) {
+              if (!items.length) return '';
+              const idx = items[0].dataIndex;
+              const dStr = r[idx].date;
+              return `${dStr} (${dStr.slice(5).replace('-', '/')})`;
+            },
+            afterBody: function(items) {
+              if (!items.length) return [];
+              const idx = items[0].dataIndex;
+              const dStr = r[idx].date;
+              const evts = getEventsForDate(dStr);
+              if (!evts.length) return [];
+              const lines = ['----------------------------', '📌 當日重要財經 / 法說事件：'];
+              evts.forEach(e => {
+                lines.push(` ${e.icon} ${e.label} ${e.detail || ''}`);
+              });
+              return lines;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true },
+        yVol: {
+          type: 'linear',
+          position: 'left',
+          stacked: true,
+          title: { display: true, text: '買賣超 (張)' },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        yPrice: {
+          type: 'linear',
+          position: 'right',
+          title: { display: true, text: '股價 (元)' },
+          grid: { drawOnChartArea: false }
+        }
+      }
+    }
+  });
+}
+
+async function loadInst(code) {
+  $('instMsg').textContent = '載入中…（首次查詢需逐日向證交所抓取，約 30–60 秒；之後有快取）';
+  $('instTable').innerHTML = '';
+  if (instChart) instChart.destroy();
+  const d = await (await fetch(`/api/institutional/${code}`)).json();
+  if (code !== current) return;
+  if (d.error) { $('instMsg').textContent = d.error; instData = null; return; }
+  instData = d;
+  const r = d.rows, sum = k => r.reduce((a, x) => a + x[k], 0);
+  $('instMsg').innerHTML = `<b>${d.market}</b>　區間合計：外資 ${signed(sum('foreign'))}　投信 ${signed(sum('trust'))}　自營商 ${signed(sum('dealer'))}　三大法人 ${signed(sum('total'))}`;
+  renderInstChart();
+  $('instTable').innerHTML = `<table><tr><th>日期</th><th>外資</th><th>投信</th><th>自營商</th><th>合計</th></tr>
+    ${[...r].reverse().map(x => `<tr><td>${x.date.slice(5).replace('-', '/')}</td><td>${signed(x.foreign)}</td><td>${signed(x.trust)}</td><td>${signed(x.dealer)}</td><td>${signed(x.total)}</td></tr>`).join('')}</table>`;
+}
+
+async function loadSettlement() {
+  const d = await (await fetch('/api/settlement?days=60&past_days=45')).json();
+  settlementData = d;
+  renderHistoryChart(); // 當結算日資料載入後，更新收盤價歷史圖表標記
+  renderInstChart(); // 當結算日資料載入後，更新三大法人圖表標記
+  const color = e => e.startsWith('月') ? '#d32f2f' : (e.includes('富時') || e.includes('摩台')) ? '#8e24aa' : e.startsWith('週三') ? '#1e88e5' : '#00897b';
+  
+  // 計算當週週日到週六範圍
+  const now = new Date(d.today);
+  const curDay = now.getDay(); // 0(日) - 6(六)
+  const thisWeekStart = new Date(now);
+  thisWeekStart.setDate(now.getDate() - curDay);
+  thisWeekStart.setHours(0, 0, 0, 0);
+  
+  const thisWeekEnd = new Date(thisWeekStart);
+  thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
+  thisWeekEnd.setHours(23, 59, 59, 999);
+  
+  const nextWeekStart = new Date(thisWeekStart);
+  nextWeekStart.setDate(thisWeekStart.getDate() + 7);
+  
+  const nextWeekEnd = new Date(thisWeekEnd);
+  nextWeekEnd.setDate(thisWeekEnd.getDate() + 7);
+
+  const thisWeekEvents = [];
+  const nextWeekEvents = [];
+
+  d.events.forEach(x => {
+    const itemDate = new Date(x.date);
+    if (itemDate >= thisWeekStart && itemDate <= thisWeekEnd) {
+      thisWeekEvents.push(x);
+    } else if (itemDate >= nextWeekStart && itemDate <= nextWeekEnd) {
+      nextWeekEvents.push(x);
+    }
+  });
+
+  const fmtRange = (s, e) => `${s.getMonth()+1}/${s.getDate()} ~ ${e.getMonth()+1}/${e.getDate()}`;
+  const renderList = (list) => {
+    if (!list.length) return `<div class="muted" style="padding:6px 0;">無結算日程</div>`;
+    return list.map(x => {
+      let badgeCls = 'badge-normal';
+      let badgeText = `${x.days_left} 天後`;
+      if (x.days_left === 0) { badgeCls = 'badge-today'; badgeText = '今天'; }
+      else if (x.days_left === 1) { badgeCls = 'badge-soon'; badgeText = '明天'; }
+      
+      const evs = x.events.map(e => `<b style="color:${color(e)}">● ${e}</b>`).join('　');
+      return `<div class="settle-item">
+        <div>
+          <span style="font-weight:600; margin-right:6px;">${x.date.slice(5).replace('-', '/')} (${x.weekday})</span>
+          <span>${evs}</span>
+        </div>
+        <div><span class="badge ${badgeCls}">${badgeText}</span></div>
+      </div>`;
+    }).join('');
+  };
+
+  $('settle').classList.remove('muted');
+  $('settle').innerHTML = `
+    <div class="settle-grid">
+      <div class="settle-col">
+        <h4><span>本週結算日</span><span class="muted" style="font-weight:normal; font-size:12px;">${fmtRange(thisWeekStart, thisWeekEnd)}</span></h4>
+        ${renderList(thisWeekEvents)}
+      </div>
+      <div class="settle-col">
+        <h4><span>下週結算日</span><span class="muted" style="font-weight:normal; font-size:12px;">${fmtRange(nextWeekStart, nextWeekEnd)}</span></h4>
+        ${renderList(nextWeekEvents)}
+      </div>
+    </div>`;
+}
+loadSettlement();
+
+async function loadUsMarket() {
+  try {
+    const d = await (await fetch('/api/us-market')).json();
+    globalMarketData = d;
+    renderHistoryChart(); // 當美股重大事件載入後，更新收盤價歷史圖表標記
+    renderInstChart(); // 當美股重大事件載入後，更新三大法人圖表標記
+    const leftText = n => n === 0 ? '今天' : n === 1 ? '明天' : n < 0 ? '已過' : `${n}天後`;
+    const badgeCls = n => n === 0 ? 'badge-today' : n <= 3 && n > 0 ? 'badge-soon' : 'badge-normal';
+
+    // 1. 宏觀重大事件
+    $('usMacroList').innerHTML = d.macro.length ? d.macro.map(x => `
+      <div class="settle-item" style="align-items:flex-start; padding:6px 0;">
+        <div style="flex:1; min-width:0;">
+          <div style="${x.impact === 'high' ? 'font-weight:bold; color:#b91c1c;' : 'font-weight:600; color:#1e293b;'}">${esc(x.event)}</div>
+          <div style="font-size:11px; margin-top:3px; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+            ${x.tw_time ? `<span style="background:#e0f2fe; color:#0369a1; padding:1px 6px; border-radius:4px; font-weight:600;">🇹🇼 ${esc(x.tw_time)}</span>` : ''}
+            <span class="muted">🇺🇸 ${esc(x.us_time || x.date.slice(5).replace('-', '/'))}</span>
+          </div>
+        </div>
+        <div style="margin-left:6px; flex-shrink:0;"><span class="badge ${badgeCls(x.days_left)}">${leftText(x.days_left)}</span></div>
+      </div>`).join('') : '<div class="muted">近期無重大事件</div>';
+
+    // 2. 七巨頭財報
+    $('usMag7List').innerHTML = d.mag7.length ? d.mag7.map(x => {
+      const extra = [];
+      if (x.eps_est !== null) extra.push(`EPS \$${x.eps_est}`);
+      if (x.rev_est_b) extra.push(`營收 \$${x.rev_est_b}B`);
+
+      // 股價與漲跌標籤 (美股慣例：漲紅/綠，台股習慣漲紅/跌綠)
+      let priceHtml = '';
+      if (x.price != null) {
+        const sign = x.change > 0 ? '+' : '';
+        const chgColor = x.change > 0 ? '#dc2626' : (x.change < 0 ? '#16a34a' : '#64748b');
+        priceHtml = `
+          <span style="display:inline-flex; align-items:baseline; gap:4px; margin-left:6px; font-size:12px;">
+            <b style="color:#0f172a; font-family:-apple-system,BlinkMacSystemFont,sans-serif;">\$${x.price.toFixed(2)}</b>
+            <span style="color:${chgColor}; font-size:11px; font-weight:600;">(${sign}${x.change.toFixed(2)} / ${sign}${x.pct.toFixed(2)}%)</span>
+          </span>`;
+      }
+
+      const googleUrl = x.google_url || `https://www.google.com/search?q=stock:${x.symbol.toLowerCase()}`;
+
+      return `
+        <div class="settle-item" style="align-items:flex-start; padding:6px 0;">
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; flex-wrap:wrap;">
+              <a href="${esc(googleUrl)}" target="_blank" rel="noopener noreferrer" title="開啟 Google 股價查詢" style="font-size:13px; font-weight:bold; color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:2px; border-bottom:1px dashed #93c5fd;">
+                ${esc(x.symbol)}
+                <span style="font-size:10px; opacity:0.8;">↗</span>
+              </a>
+              <span class="muted" style="font-size:12px; margin-left:4px;">${esc(x.name.split(' ')[0])}</span>
+              ${priceHtml}
+              ${extra.length ? `<span class="muted" style="font-size:11px; margin-left:6px;">(${extra.join(', ')})</span>` : ''}
+            </div>
+            <div style="font-size:11px; margin-top:3px; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+              ${x.tw_time ? `<span style="background:#e0f2fe; color:#0369a1; padding:1px 6px; border-radius:4px; font-weight:600;">🇹🇼 ${esc(x.tw_time)}</span>` : ''}
+              <span class="muted">🇺🇸 ${esc(x.us_time || (x.date.slice(5).replace('-', '/') + ' 盤後'))}</span>
+            </div>
+          </div>
+          <div style="margin-left:6px; flex-shrink:0;"><span class="badge ${badgeCls(x.days_left)}">${leftText(x.days_left)}</span></div>
+        </div>`;
+    }).join('') : '<div class="muted">近期七巨頭無發布日程</div>';
+  } catch (err) {
+    $('usMacroList').textContent = '美股資料載入異常';
+    $('usMag7List').textContent = '七巨頭日程載入異常';
+  }
+}
+loadUsMarket();
+
+async function loadVix() {
+  try {
+    const d = await (await fetch('/api/vix')).json();
+    if (d.error || (!d.tw && !d.us)) {
+      $('vixBox').innerHTML = `<div class="muted" style="font-size:13px; padding:6px 0;">市場波動率資料暫時無法取得</div>`;
+      return;
+    }
+    const renderCard = (item, flag, label) => {
+      if (!item) return `<div class="settle-col" style="padding:10px 12px;"><div class="muted">${flag} ${label} 暫無資料</div></div>`;
+      const chgSign = item.change > 0 ? '+' : '';
+      const chgIcon = item.change > 0 ? '▲' : item.change < 0 ? '▼' : '';
+      const chgColor = item.change > 0 ? '#dc2626' : item.change < 0 ? '#16a34a' : '#64748b';
+      return `
+        <div class="settle-col" style="padding:8px 12px; background:#fff; border:1px solid #e2e8f0; border-radius:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:700; font-size:13px; color:#1e293b;">${flag} ${esc(label)}</span>
+            <span class="badge" style="background:${item.bg_color}; color:${item.color}; border:1px solid ${item.border_color}; font-size:11px; padding:2px 8px;">${esc(item.status)}</span>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:8px; margin:4px 0 2px;">
+            <span style="font-size:24px; font-weight:800; color:${item.color}; font-family:-apple-system,BlinkMacSystemFont,sans-serif;">${item.close.toFixed(2)}</span>
+            <span style="font-size:12px; font-weight:700; color:${chgColor};">${chgIcon} ${chgSign}${item.change.toFixed(2)} (${chgSign}${item.pct.toFixed(2)}%)</span>
+          </div>
+          <div class="muted" style="font-size:11px; display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+            <span>${esc(item.symbol)} · ${esc(item.source)}</span>
+            <span>${esc(item.date)}</span>
+          </div>
+        </div>`;
+    };
+
+    $('vixBox').innerHTML = `
+      ${renderCard(d.tw, '🇹🇼', '臺指選擇權 VIX')}
+      ${renderCard(d.us, '🇺🇸', '美股標普 VIX')}
+    `;
+  } catch (err) {
+    $('vixBox').innerHTML = `<div class="muted" style="font-size:13px; padding:6px 0;">波動率載入異常</div>`;
+  }
+}
+loadVix();
+
+let m2Chart, cbChart;
+async function loadGlobalM2() {
+  try {
+    const d = await (await fetch('/api/global-m2')).json();
+    if (d.error) {
+      $('m2Strip').innerHTML = `<span class="muted">${esc(d.error)}</span>`;
+      return;
+    }
+    const lt = d.latest || {};
+    const sign = v => v > 0 ? `+${v}%` : `${v}%`;
+    const color = v => v > 0 ? '#b91c1c' : '#15803d';
+
+    $('m2Strip').innerHTML = [
+      ['🇺🇸 美國 M2 總額', lt.us_m2_val ? `\$${lt.us_m2_val.toLocaleString()} B` : '-'],
+      ['🇺🇸 美國 M2 年增率', lt.us_m2_yoy != null ? `<span style="color:${color(lt.us_m2_yoy)}">${sign(lt.us_m2_yoy)}</span>` : '-'],
+      ['🏛️ Fed 聯準會總資產年增', lt.fed_assets_yoy != null ? `<span style="color:${color(lt.fed_assets_yoy)}">${sign(lt.fed_assets_yoy)}</span>` : '-'],
+      ['🇪🇺 ECB 歐洲央行資產年增', lt.ecb_assets_yoy != null ? `<span style="color:${color(lt.ecb_assets_yoy)}">${sign(lt.ecb_assets_yoy)}</span>` : '-'],
+      ['🇯🇵 BOJ 日本央行資產年增', lt.boj_assets_yoy != null ? `<span style="color:${color(lt.boj_assets_yoy)}">${sign(lt.boj_assets_yoy)}</span>` : '-'],
+    ].map(([k, v]) => `<span class="val-pill">${k}<b>${v}</b></span>`).join('');
+
+    const opts = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false } };
+
+    // 1. 美國 M2 圖表
+    if (d.m2_levels?.length && d.m2_yoy?.length) {
+      const dates = d.m2_levels.map(x => x.date.slice(0, 7));
+      m2Chart = new Chart($('m2Chart'), {
+        data: {
+          labels: dates,
+          datasets: [
+            { type: 'line', label: 'M2 年增率 (%)', data: d.m2_yoy.map(x => x.value), borderColor: '#e53e3e', yAxisID: 'yYoY', tension: .2 },
+            { type: 'bar', label: 'M2 總額 (十億美元)', data: d.m2_levels.map(x => x.value), backgroundColor: '#1e88e5', yAxisID: 'yAmount' }
+          ]
+        },
+        options: {
+          ...opts,
+          scales: {
+            yAmount: { position: 'left', title: { display: true, text: '總額 ($B)' } },
+            yYoY: { position: 'right', title: { display: true, text: '年增率 (%)' }, grid: { drawOnChartArea: false } }
+          }
+        }
+      });
+    }
+
+    // 2. 主要央行印鈔水庫 YoY 圖表
+    if (d.fed_yoy?.length) {
+      const fedMap = Object.fromEntries(d.fed_yoy.map(x => [x.date.slice(0, 7), x.value]));
+      const ecbMap = Object.fromEntries((d.ecb_yoy || []).map(x => [x.date.slice(0, 7), x.value]));
+      const bojMap = Object.fromEntries((d.boj_yoy || []).map(x => [x.date.slice(0, 7), x.value]));
+      const months = Array.from(new Set([...Object.keys(fedMap), ...Object.keys(ecbMap), ...Object.keys(bojMap)])).sort().slice(-18);
+
+      cbChart = new Chart($('cbChart'), {
+        type: 'line',
+        data: {
+          labels: months,
+          datasets: [
+            { label: 'Fed 總資產 YoY %', data: months.map(m => fedMap[m] ?? null), borderColor: '#1e3a5f', tension: .2, spanGaps: true },
+            { label: 'ECB 總資產 YoY %', data: months.map(m => ecbMap[m] ?? null), borderColor: '#f0a500', tension: .2, spanGaps: true },
+            { label: 'BOJ 總資產 YoY %', data: months.map(m => bojMap[m] ?? null), borderColor: '#8e24aa', tension: .2, spanGaps: true },
+          ]
+        },
+        options: {
+          ...opts,
+          scales: {
+            y: { title: { display: true, text: '年增率 (%)' }, grid: { color: 'rgba(0,0,0,0.06)' } }
+          }
+        }
+      });
+    }
+  } catch (err) {
+    $('m2Strip').textContent = 'FRED 宏觀流動性數據載入異常';
+  }
+}
+loadGlobalM2();
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let revChart, epsChart, perChart;
+
+async function loadFundamentals(code) {
+  $('fundMsg').textContent = '載入中…';
+  $('fundBox').style.display = 'none';
+  [revChart, epsChart, perChart].forEach(c => c && c.destroy());
+  let d;
+  try { d = await (await fetch(`/api/fundamentals/${encodeURIComponent(code)}`)).json(); }
+  catch { $('fundMsg').textContent = 'FinMind 資料載入失敗'; return; }
+  if (code !== current) return;
+  if (d.error) { $('fundMsg').textContent = d.error; return; }
+  $('fundMsg').textContent = d.errors.length ? '部分資料無法取得：' + d.errors.join('；') : '資料來源：FinMind（快取 6 小時）';
+  $('fundBox').style.display = 'block';
+
+  // 最新估值
+  const p = (d.per || []).at(-1), r = (d.revenue || []).at(-1), e = d.eps || [];
+  const ttm = e.length >= 4 ? e.slice(-4).reduce((a, x) => a + x.eps, 0).toFixed(2) : '-';
+  $('valStrip').innerHTML = [
+    ['本益比', p?.per], ['淨值比', p?.pbr], ['殖利率', p ? p.yield + '%' : null],
+    ['近四季 EPS', ttm], ['最新月營收年增', r?.yoy != null ? r.yoy + '%' : null],
+  ].map(([k, v]) => `<span class="val-pill">${k}<b>${esc(v ?? '-')}</b></span>`).join('');
+
+  const opts = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false } };
+  if (d.revenue?.length) revChart = new Chart($('revChart'), {
+    data: { labels: d.revenue.map(x => x.ym), datasets: [
+      { type: 'line', label: '年增率 %', data: d.revenue.map(x => x.yoy), borderColor: '#e53e3e', yAxisID: 'y2', tension: .2 },
+      { type: 'bar', label: '營收 (億)', data: d.revenue.map(x => x.revenue), backgroundColor: '#1e88e5', yAxisID: 'y' }] },
+    options: { ...opts, scales: { y: { position: 'left' }, y2: { position: 'right', grid: { drawOnChartArea: false } } } }
+  });
+  if (e.length) epsChart = new Chart($('epsChart'), {
+    type: 'bar',
+    data: { labels: e.map(x => x.quarter), datasets: [{ label: 'EPS', data: e.map(x => x.eps),
+      backgroundColor: e.map(x => x.eps >= 0 ? '#f0a500' : '#2e7d32') }] },
+    options: opts
+  });
+  if (d.per?.length) perChart = new Chart($('perChart'), {
+    type: 'line',
+    data: { labels: d.per.map(x => x.date.slice(5).replace('-', '/')), datasets: [
+      { label: '本益比', data: d.per.map(x => x.per), borderColor: '#1e3a5f', pointRadius: 0, yAxisID: 'y' },
+      { label: '淨值比', data: d.per.map(x => x.pbr), borderColor: '#8e24aa', pointRadius: 0, yAxisID: 'y2' }] },
+    options: { ...opts, scales: { y: { position: 'left' }, y2: { position: 'right', grid: { drawOnChartArea: false } } } }
+  });
+
+  const dv = d.dividends || [];
+  $('divTable').innerHTML = dv.length ? `<table><tr><th>期間</th><th>現金</th><th>股票</th><th>除息日</th><th>發放日</th></tr>
+    ${dv.map(x => `<tr><td>${esc(x.period)}</td><td>${esc(x.cash)}</td><td>${esc(x.stock)}</td><td>${esc(x.ex_date || '-')}</td><td>${esc(x.pay_date || '-')}</td></tr>`).join('')}</table>`
+    : '<p class="muted">無股利資料</p>';
+}
+
+async function loadEvents(code) {
+  $('evtMsg').textContent = '載入中…（首次查詢需向公開資訊觀測站逐月抓取，約 20–40 秒；之後有快取）';
+  $('evtBox').style.display = 'none';
+  let d;
+  try { d = await (await fetch(`/api/events/${encodeURIComponent(code)}`)).json(); }
+  catch { $('evtMsg').textContent = '財報日／法說會資料載入失敗'; return; }
+  if (code !== current) return;
+  if (d.error) { $('evtMsg').textContent = d.error; return; }
+  eventsData = d;
+  renderHistoryChart(); // 當法說會與財報資料載入後，更新收盤價歷史圖表標記
+  renderInstChart(); // 當法說會與財報資料載入後，更新三大法人圖表標記
+  $('evtMsg').textContent = d.errors.length ? '部分資料無法取得：' + d.errors.join('；') : '資料來源：公開資訊觀測站';
+  $('evtBox').style.display = 'block';
+
+  const cls = t => t === '法說會' ? 'conf' : t.startsWith('財報截止') ? 'deadline' : 'report';
+  const left = n => n === 0 ? '今天' : n === 1 ? '明天' : `${n} 天後`;
+  const up = d.upcoming || [];
+  $('evtUpcoming').innerHTML = up.length ? up.map(x => `
+    <div class="evt-item ${cls(x.type)}">
+      <div class="evt-date">${esc(x.date.slice(5).replace('-', '/'))}<div class="muted">${left(x.days_left)}</div></div>
+      <div class="evt-body"><b>${esc(x.type)}</b>${x.time ? ` · ${esc(x.time)}` : ''}${x.place ? ` · ${esc(x.place)}` : ''}
+        <div>${esc(x.title)}</div>${x.note ? `<div class="muted">${esc(x.note)}</div>` : ''}</div>
+    </div>`).join('') : '<p class="muted">目前沒有已公告的未來事件</p>';
+
+  const pr = d.past_reports || [];
+  $('evtReports').innerHTML = pr.length ? `<table><tr><th>公布日</th><th>期別</th><th>公告主旨</th></tr>
+    ${pr.map(x => `<tr><td>${esc(x.date.replace(/-/g, '/'))}<div class="muted">${esc(x.time)}</div></td><td>${esc(x.period)}</td><td class="evt-cell">${esc(x.title)}</td></tr>`).join('')}</table>`
+    : '<p class="muted">近兩年查無財報公告</p>';
+
+  const pc = d.past_conferences || [];
+  $('evtConfs').innerHTML = pc.length ? `<table><tr><th>日期</th><th>地點</th><th>內容</th></tr>
+    ${pc.map(x => `<tr><td>${esc(x.date.replace(/-/g, '/'))}<div class="muted">${esc(x.time)}</div></td><td class="evt-cell" style="min-width:110px">${esc(x.place)}</td><td class="evt-cell">${esc(x.title)}</td></tr>`).join('')}</table>`
+    : '<p class="muted">近 12 個月沒有法說會紀錄</p>';
+}
+
+async function updateVal() {
+  $('updLog').innerHTML = '更新中…（約數秒至數十秒）';
+  const d = await (await fetch(`/api/update/${current}`, { method: 'POST' })).json();
+  $('updLog').innerHTML = `<pre>${(d.log || d.error || '').replace(/</g, '&lt;')}</pre>`;
+  loadReport(current);
+}
+
+document.addEventListener('click', e => { if (e.target.classList.contains('wl')) { search(e.target.dataset.kw); window.scrollTo(0, 0); } });
+$('code').addEventListener('keydown', e => e.key === 'Enter' && lookup());
+$('kw').addEventListener('keydown', e => e.key === 'Enter' && search());
+
+// 首頁預設代入並查詢 2330 台積電
+lookup('2330');
+</script>
+</body>
+</html>

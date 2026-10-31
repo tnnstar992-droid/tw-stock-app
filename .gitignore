@@ -1,0 +1,17 @@
+# Environment variables and secrets
+.env
+.env.*
+*.env
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+env/
+venv/
+
+# App local caches and logs
+cache/
+*.log

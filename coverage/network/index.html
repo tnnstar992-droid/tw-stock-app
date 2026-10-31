@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<title>Taiwan Stock Wikilink Network</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1a1a2e; color: #eee; overflow: hidden; }
+  #controls { position: fixed; top: 12px; left: 12px; z-index: 10; background: rgba(26,26,46,0.95); padding: 16px; border-radius: 10px; border: 1px solid #333; }
+  #controls h2 { font-size: 16px; margin-bottom: 8px; }
+  #controls label { font-size: 13px; display: block; margin: 6px 0 2px; }
+  #controls input[type=range] { width: 180px; }
+  #controls input[type=text] { width: 180px; padding: 4px 8px; background: #2a2a4e; border: 1px solid #444; color: #eee; border-radius: 4px; }
+  #legend { position: fixed; bottom: 12px; left: 12px; z-index: 10; background: rgba(26,26,46,0.95); padding: 12px; border-radius: 10px; border: 1px solid #333; display: flex; flex-wrap: wrap; }
+  #tooltip { position: fixed; background: rgba(0,0,0,0.9); color: #fff; padding: 8px 14px; border-radius: 6px; font-size: 13px; pointer-events: none; display: none; z-index: 20; border: 1px solid #555; }
+  #stats { position: fixed; top: 12px; right: 12px; z-index: 10; background: rgba(26,26,46,0.95); padding: 12px 16px; border-radius: 10px; border: 1px solid #333; font-size: 13px; }
+  svg { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<div id="controls">
+  <h2>Wikilink Network</h2>
+  <label>Min Edge Weight: <span id="weightVal">5</span></label>
+  <input type="range" id="weightSlider" min="1" max="50" value="5">
+  <label>Search:</label>
+  <input type="text" id="search" placeholder="e.g. 台積電, NVIDIA, CoWoS">
+</div>
+<div id="legend"><div style="display:flex;align-items:center;margin:4px 12px"><div style="width:14px;height:14px;border-radius:50%;background:#e74c3c;margin-right:6px"></div><span style="font-size:13px">台灣公司</span></div><div style="display:flex;align-items:center;margin:4px 12px"><div style="width:14px;height:14px;border-radius:50%;background:#3498db;margin-right:6px"></div><span style="font-size:13px">國際公司</span></div><div style="display:flex;align-items:center;margin:4px 12px"><div style="width:14px;height:14px;border-radius:50%;background:#2ecc71;margin-right:6px"></div><span style="font-size:13px">技術/標準</span></div><div style="display:flex;align-items:center;margin:4px 12px"><div style="width:14px;height:14px;border-radius:50%;background:#f39c12;margin-right:6px"></div><span style="font-size:13px">材料/基板</span></div><div style="display:flex;align-items:center;margin:4px 12px"><div style="width:14px;height:14px;border-radius:50%;background:#9b59b6;margin-right:6px"></div><span style="font-size:13px">終端應用</span></div></div>
+<div id="tooltip"></div>
+<div id="stats"></div>
+<svg></svg>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+const fullData = {"nodes": [{"id": "物聯網", "count": 71, "category": "application", "color": "#9b59b6"}, {"id": "鴻海", "count": 73, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "仁寶", "count": 33, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "消費性電子", "count": 55, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "Dell", "count": 100, "category": "international_company", "color": "#3498db"}, {"id": "Qualcomm", "count": 35, "category": "international_company", "color": "#3498db"}, {"id": "聯華電子", "count": 27, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "Micron", "count": 53, "category": "international_company", "color": "#3498db"}, {"id": "電動車", "count": 134, "category": "application", "color": "#9b59b6"}, {"id": "Microsoft", "count": 72, "category": "international_company", "color": "#3498db"}, {"id": "群創", "count": 82, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "Tesla", "count": 56, "category": "international_company", "color": "#3498db"}, {"id": "5G", "count": 129, "category": "technology", "color": "#2ecc71"}, {"id": "日月光投控", "count": 66, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "AI 伺服器", "count": 148, "category": "application", "color": "#9b59b6"}, {"id": "CoWoS", "count": 39, "category": "technology", "color": "#2ecc71"}, {"id": "自動化", "count": 49, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "Intel", "count": 91, "category": "international_company", "color": "#3498db"}, {"id": "聯電", "count": 69, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "HP", "count": 93, "category": "international_company", "color": "#3498db"}, {"id": "銅箔", "count": 55, "category": "material", "color": "#f39c12"}, {"id": "聯發科", "count": 56, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "OEM", "count": 60, "category": "international_company", "color": "#3498db"}, {"id": "NVIDIA", "count": 115, "category": "international_company", "color": "#3498db"}, {"id": "廣達", "count": 63, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "Broadcom", "count": 45, "category": "international_company", "color": "#3498db"}, {"id": "東和鋼鐵", "count": 26, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "PCB", "count": 129, "category": "technology", "color": "#2ecc71"}, {"id": "Google", "count": 68, "category": "international_company", "color": "#3498db"}, {"id": "Samsung", "count": 80, "category": "international_company", "color": "#3498db"}, {"id": "欣興", "count": 40, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "伺服器", "count": 84, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "亞洲水泥", "count": 28, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "CSP", "count": 36, "category": "international_company", "color": "#3498db"}, {"id": "AI", "count": 160, "category": "technology", "color": "#2ecc71"}, {"id": "友達", "count": 83, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "AMD", "count": 65, "category": "international_company", "color": "#3498db"}, {"id": "豐興鋼鐵", "count": 24, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "半導體", "count": 137, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "台灣水泥", "count": 50, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "資料中心", "count": 81, "category": "application", "color": "#9b59b6"}, {"id": "Lenovo", "count": 47, "category": "international_company", "color": "#3498db"}, {"id": "ODM", "count": 82, "category": "international_company", "color": "#3498db"}, {"id": "緯創", "count": 40, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "台積電", "count": 215, "category": "taiwan_company", "color": "#e74c3c"}, {"id": "Apple", "count": 96, "category": "international_company", "color": "#3498db"}, {"id": "Amazon", "count": 65, "category": "international_company", "color": "#3498db"}, {"id": "Meta", "count": 82, "category": "international_company", "color": "#3498db"}], "links": [{"source": "5G", "target": "AI 伺服器", "weight": 22}, {"source": "5G", "target": "電動車", "weight": 24}, {"source": "AI 伺服器", "target": "電動車", "weight": 30}, {"source": "AI 伺服器", "target": "廣達", "weight": 23}, {"source": "亞洲水泥", "target": "台灣水泥", "weight": 27}, {"source": "AI 伺服器", "target": "NVIDIA", "weight": 44}, {"source": "ODM", "target": "OEM", "weight": 47}, {"source": "Amazon", "target": "Google", "weight": 22}, {"source": "Amazon", "target": "Microsoft", "weight": 22}, {"source": "Dell", "target": "HP", "weight": 76}, {"source": "Dell", "target": "Microsoft", "weight": 27}, {"source": "Google", "target": "Meta", "weight": 29}, {"source": "Google", "target": "Microsoft", "weight": 28}, {"source": "HP", "target": "Microsoft", "weight": 20}, {"source": "半導體", "target": "台積電", "weight": 56}, {"source": "友達", "target": "台積電", "weight": 26}, {"source": "CoWoS", "target": "台積電", "weight": 33}, {"source": "友達", "target": "群創", "weight": 67}, {"source": "台積電", "target": "群創", "weight": 25}, {"source": "台積電", "target": "聯電", "weight": 52}, {"source": "5G", "target": "Broadcom", "weight": 23}, {"source": "5G", "target": "聯發科", "weight": 26}, {"source": "Broadcom", "target": "聯發科", "weight": 21}, {"source": "AI", "target": "Google", "weight": 27}, {"source": "AI", "target": "Microsoft", "weight": 23}, {"source": "AI", "target": "NVIDIA", "weight": 42}, {"source": "AI 伺服器", "target": "Dell", "weight": 29}, {"source": "AI 伺服器", "target": "HP", "weight": 24}, {"source": "Qualcomm", "target": "聯發科", "weight": 21}, {"source": "AI", "target": "資料中心", "weight": 27}, {"source": "AI", "target": "伺服器", "weight": 35}, {"source": "AI", "target": "台積電", "weight": 33}, {"source": "伺服器", "target": "資料中心", "weight": 28}, {"source": "5G", "target": "AI", "weight": 23}, {"source": "5G", "target": "物聯網", "weight": 20}, {"source": "AI 伺服器", "target": "AMD", "weight": 20}, {"source": "AI 伺服器", "target": "Intel", "weight": 21}, {"source": "AMD", "target": "Intel", "weight": 50}, {"source": "AMD", "target": "NVIDIA", "weight": 44}, {"source": "Intel", "target": "NVIDIA", "weight": 45}, {"source": "台積電", "target": "日月光投控", "weight": 39}, {"source": "Dell", "target": "Lenovo", "weight": 40}, {"source": "HP", "target": "Lenovo", "weight": 39}, {"source": "Dell", "target": "廣達", "weight": 25}, {"source": "Micron", "target": "Samsung", "weight": 24}, {"source": "仁寶", "target": "廣達", "weight": 30}, {"source": "廣達", "target": "緯創", "weight": 31}, {"source": "AI", "target": "AMD", "weight": 25}, {"source": "AI", "target": "Intel", "weight": 26}, {"source": "HP", "target": "Samsung", "weight": 21}, {"source": "HP", "target": "廣達", "weight": 21}, {"source": "Apple", "target": "Dell", "weight": 23}, {"source": "Apple", "target": "HP", "weight": 20}, {"source": "Apple", "target": "Samsung", "weight": 25}, {"source": "AI 伺服器", "target": "PCB", "weight": 23}, {"source": "AI 伺服器", "target": "伺服器", "weight": 22}, {"source": "NVIDIA", "target": "PCB", "weight": 20}, {"source": "NVIDIA", "target": "伺服器", "weight": 26}, {"source": "NVIDIA", "target": "資料中心", "weight": 20}, {"source": "NVIDIA", "target": "台積電", "weight": 20}, {"source": "廣達", "target": "鴻海", "weight": 23}, {"source": "CSP", "target": "伺服器", "weight": 20}, {"source": "Tesla", "target": "電動車", "weight": 28}, {"source": "AI", "target": "自動化", "weight": 21}, {"source": "AI", "target": "半導體", "weight": 35}, {"source": "伺服器", "target": "半導體", "weight": 24}, {"source": "半導體", "target": "自動化", "weight": 28}, {"source": "半導體", "target": "消費性電子", "weight": 29}, {"source": "半導體", "target": "聯電", "weight": 24}, {"source": "PCB", "target": "半導體", "weight": 20}, {"source": "Micron", "target": "台積電", "weight": 25}, {"source": "PCB", "target": "銅箔", "weight": 32}, {"source": "PCB", "target": "欣興", "weight": 21}, {"source": "半導體", "target": "日月光投控", "weight": 22}, {"source": "亞洲水泥", "target": "東和鋼鐵", "weight": 21}, {"source": "亞洲水泥", "target": "豐興鋼鐵", "weight": 21}, {"source": "台灣水泥", "target": "東和鋼鐵", "weight": 21}, {"source": "台灣水泥", "target": "豐興鋼鐵", "weight": 21}, {"source": "東和鋼鐵", "target": "豐興鋼鐵", "weight": 21}, {"source": "台積電", "target": "聯華電子", "weight": 20}]};
+const width = window.innerWidth, height = window.innerHeight;
+
+const svg = d3.select("svg");
+const g = svg.append("g");
+
+// Zoom
+svg.call(d3.zoom().scaleExtent([0.1, 8]).on("zoom", (e) => g.attr("transform", e.transform)));
+
+const tooltip = d3.select("#tooltip");
+let simulation, linkG, nodeG, labelG;
+
+function render(minWeight) {
+  const links = fullData.links.filter(l => l.weight >= minWeight);
+  const activeIds = new Set();
+  links.forEach(l => { activeIds.add(l.source.id || l.source); activeIds.add(l.target.id || l.target); });
+  const nodes = fullData.nodes.filter(n => activeIds.has(n.id));
+
+  d3.select("#stats").html(`Nodes: ${nodes.length} | Edges: ${links.length}`);
+
+  g.selectAll("*").remove();
+
+  // Scale
+  const maxCount = d3.max(nodes, d => d.count) || 1;
+  const rScale = d3.scaleSqrt().domain([1, maxCount]).range([4, 40]);
+  const maxWeight = d3.max(links, l => l.weight) || 1;
+  const wScale = d3.scaleLinear().domain([minWeight, maxWeight]).range([0.5, 4]);
+  const oScale = d3.scaleLinear().domain([minWeight, maxWeight]).range([0.15, 0.6]);
+
+  simulation = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id(d => d.id).distance(80).strength(0.3))
+    .force("charge", d3.forceManyBody().strength(-150))
+    .force("center", d3.forceCenter(width / 2, height / 2))
+    .force("collision", d3.forceCollide().radius(d => rScale(d.count) + 2));
+
+  linkG = g.append("g").selectAll("line").data(links).join("line")
+    .attr("stroke", "#555").attr("stroke-opacity", d => oScale(d.weight))
+    .attr("stroke-width", d => wScale(d.weight));
+
+  nodeG = g.append("g").selectAll("circle").data(nodes).join("circle")
+    .attr("r", d => rScale(d.count)).attr("fill", d => d.color)
+    .attr("stroke", "#fff").attr("stroke-width", 0.5).attr("opacity", 0.9)
+    .call(d3.drag().on("start", dragStart).on("drag", dragging).on("end", dragEnd))
+    .on("mouseover", (e, d) => {
+      tooltip.style("display", "block").html(
+        `<b>${d.id}</b><br>提及次數: ${d.count}<br>類別: ${d.category}`
+      );
+      highlightNeighbors(d);
+    })
+    .on("mousemove", (e) => tooltip.style("left", e.pageX+12+"px").style("top", e.pageY-20+"px"))
+    .on("mouseout", () => { tooltip.style("display", "none"); resetHighlight(); });
+
+  labelG = g.append("g").selectAll("text").data(nodes.filter(d => d.count >= 20)).join("text")
+    .text(d => d.id).attr("font-size", d => Math.max(8, Math.min(14, rScale(d.count) * 0.7)))
+    .attr("fill", "#ccc").attr("text-anchor", "middle").attr("dy", d => rScale(d.count) + 12)
+    .style("pointer-events", "none");
+
+  simulation.on("tick", () => {
+    linkG.attr("x1", d=>d.source.x).attr("y1", d=>d.source.y).attr("x2", d=>d.target.x).attr("y2", d=>d.target.y);
+    nodeG.attr("cx", d=>d.x).attr("cy", d=>d.y);
+    labelG.attr("x", d=>d.x).attr("y", d=>d.y);
+  });
+}
+
+function highlightNeighbors(d) {
+  const neighbors = new Set();
+  linkG.each(function(l) {
+    if (l.source.id === d.id) neighbors.add(l.target.id);
+    if (l.target.id === d.id) neighbors.add(l.source.id);
+  });
+  neighbors.add(d.id);
+  nodeG.attr("opacity", n => neighbors.has(n.id) ? 1 : 0.1);
+  linkG.attr("stroke-opacity", l => (l.source.id===d.id||l.target.id===d.id) ? 0.8 : 0.03);
+  labelG.attr("opacity", n => neighbors.has(n.id) ? 1 : 0.1);
+}
+
+function resetHighlight() {
+  nodeG.attr("opacity", 0.9);
+  linkG.attr("stroke-opacity", d => 0.3);
+  labelG.attr("opacity", 1);
+}
+
+function dragStart(e, d) { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }
+function dragging(e, d) { d.fx = e.x; d.fy = e.y; }
+function dragEnd(e, d) { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }
+
+// Controls
+d3.select("#weightSlider").on("input", function() {
+  const v = +this.value;
+  d3.select("#weightVal").text(v);
+  render(v);
+});
+
+d3.select("#search").on("input", function() {
+  const q = this.value.toLowerCase();
+  if (!q) { resetHighlight(); return; }
+  const match = fullData.nodes.find(n => n.id.toLowerCase().includes(q));
+  if (match) highlightNeighbors(match);
+});
+
+// Initial render
+render(5);
+</script>
+</body>
+</html>

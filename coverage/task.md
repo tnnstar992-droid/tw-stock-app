@@ -1,0 +1,160 @@
+# Task: Establish Company Coverage Prototype
+**SINGLE SOURCE OF TRUTH**: This document is the definitive reference for batch definitions and task progress. Do not rely on external Excel files for batch tracking.
+**MINIMUM REQUIREMENT POLICY**: The tickers listed in this document are the *minimum* required set. You are authorized to discover and add missing tickers if they are not in the Exception List.
+**SINGLE BATCH PROCESSING**: Process entire batches as single units (e.g., Batch 21: 4908-4967) to minimize authorization interruptions. Do not subdivide.
+**UPDATE AFTER EACH BATCH**: Mark tasks as completed in this document immediately after finishing each batch.
+**VERIFICATION PROTOCOL**: Use `find_by_name` or Python scripts (e.g. `debug_batch.py`) to verify file existence. Do NOT rely on `Get-ChildItem` shell output which may be truncated or misleading.
+
+- [x] Planning Phase
+    - [x] Create task tracking
+    - [x] Verify Excel file structure <!-- id: 1 -->
+    - [x] Draft extraction logic (Financials via yfinance) <!-- id: 2 -->
+    - [x] Define AI Research Workflow (Supply Chain/Customers) <!-- id: 3 -->
+    - [x] Create implementation plan <!-- id: 4 -->
+- [/] Execution Phase <!-- id: 5 -->
+    - [x] Create `01_prototype.py` for base data (Financials + Basic Info) <!-- id: 6 -->
+    - [x] Run prototype on sample batch (5 tickers) <!-- id: 7 -->
+    - [x] **AI Agent Enrichment**: Supply Chain, Customers, and **Company Intro Translation** <!-- id: 8 -->
+    - [x] **Refinement**: Update script for Traditional Chinese headers and Million NTD units <!-- id: 9 -->
+    - [x] **Simplification**: Refactor script to show 12 key financial metrics and margins <!-- id: 10 -->
+    - [x] **Quarterly Data**: Add latest 4 quarters for the same metrics <!-- id: 11 -->
+    - [x] Re-run prototype and enrichment <!-- id: 12 -->
+- [/] Scale-Up Phase <!-- id: 13 -->
+    - [x] **Batch Generation**: Launched `02_generate_base_reports.py` for ALL tickers <!-- id: 14 -->
+        - [x] **OTC Cleanup**: Updated script to handle `.TWO` suffix for 900+ OTC stocks (Completed: 1737 Total Reports)
+    - [x] **Report Organization**: Organizing base reports into folders by Industry
+    - [/] **Batch Enrichment**: Systematically enrich reports with AI research (Intro + Supply Chain) <!-- id: 15 -->
+        - [x] **Batch 1** (Advertising Agencies): 6136
+        - [x] **Batch 2** (Aerospace & Defense): 2208, 2630, 2634, 2644, 2645, 4541, 4546, 4572, 6753, 8222
+        - [x] **Batch 3** (Agricultural Inputs): 1712, 1722, 6508
+        - [x] **Batch 4** (Airlines): 2610, 2618, 2646, 6757
+        - [x] **Batch 5** (Aluminum): 4558, 6175, 8942
+        - [x] **Batch 6** (Apparel Manufacturing): 1315, 1467, 1473, 1476, 1477, 2916, 2924, 4413, 4414, 4432, 4438, 8932
+        - [x] **Batch 7** (Apparel Retail): 1417
+        - [x] **Batch 8** (Asset Management): 6901
+        - [x] **Batch 9** (Auto & Truck Dealerships): 2207, 2247
+        - [x] **Batch 10** (Auto Manufacturers): 1599, 2201, 2204, 2206, 2227, 2237, 2258
+        - [x] **Batch 11** (Auto Parts): 1319, 1336, 1338, 1339, 1506, 1512, 1521, 1522, 1524, 1525, 1533, 1536, 1563, 1568, 1587, 2101, 2102, 2105, 2106, 2109, 2114, 2115, 2228, 2230, 2231, 2235, 2239, 2241, 2243, 2245
+        - [x] **Batch 12** (Auto Parts): 2248, 2249, 2252, 2254, 2255, 2256, 2497, 3162, 3346, 3552, 3685, 4305, 4528, 4535, 4543, 4551, 4557, 4559, 4581
+        - [x] **Batch 13** (Banks): 2812, 2834
+        - [x] **Batch 14** (Banks - Regional): 2801, 2836, 2838, 2845, 2849, 2880, 2884, 2886, 2887, 2890, 2891, 2892, 2897, 5863, 5876, 5880
+        - [x] **Batch 15** (Beverages - Non-Alcoholic): 4154
+        - [x] **Batch 16** (Biotech - Therapeutics): 4911
+        - [x] **Batch 17** (Biotechnology): 4171, 6236
+        - [x] **Batch 18** (Broadcasting): 9928
+        - [x] **Batch 19** (Building Materials): 1101, 1102, 1103, 1104, 1108, 1109, 1110, 1802, 2504, 5520, 5546, 8424, 8463, 9930
+        - [x] **Batch 20** (Building Products & Equipment): 1806, 1809, 2062, 5543, 8466, 8930, 8936, 9924, 9934
+        - [x] **Batch 21** (Business Equipment & Supplies): 1324, 2427, 2433, 2482, 4503, 5258, 5438, 5490, 6128, 6160, 6593, 6914, 8114, 8342
+        - [x] **Batch 22** (Capital Markets): 2820, 2855, 2889, 5864, 6005, 6015, 6016, 6020, 6021, 6023, 6024, 6026, 6027
+        - [x] **Batch 23** (Chemicals): 1310, 1312, 1313, 1326, 1708, 1709, 1710, 1714, 1721, 1723, 1727, 1735, 1773, 1776, 3678, 6729, 8435, 8438
+        - [x] **Batch 24** (Communication Equipment): 2314, 2321, 2332, 2345, 2419, 2444, 2485, 3025, 3047, 3062, 3138, 3163, 3209, 3221, 3363, 3380, 3419, 3447, 3466, 3491, 3558, 3577, 3596, 3664, 3672, 3694, 3704, 4903, 4905, 4906
+        - [x] **Batch 25** (Communication Equipment): 4908, 4980, 5348, 5353, 5388, 6134, 6142, 6143, 6148, 6152, 6190, 6216, 6220, 6241, 6245, 6263, 6285, 6416, 6417, 6426, 6465, 6470, 6530, 6546, 6638, 6674, 6708, 6715, 6820, 6858
+        - [x] **Batch 26** (Communication Equipment): 7812, 8011, 8034, 8045, 8048, 8059, 8089, 8097, 8101, 8176
+        - [x] **Batch 27** (Computer Hardware): 1471, 2301, 2305, 2312, 2323, 2324, 2331, 2349, 2352, 2353, 2356, 2357, 2362, 2364, 2365, 2376, 2377, 2380, 2382, 2385, 2387, 2395, 2397, 2399, 2405, 2414, 2417, 2425, 2432, 2451
+        - [x] **Batch 28** (Computer Hardware): 2465, 2480, 2495, 3005, 3013, 3021, 3022, 3029, 3032, 3046, 3057, 3088, 3097, 3213, 3231, 3272, 3324, 3349, 3406, 3434, 3479, 3494, 3515, 3535, 3564, 3594, 3611, 3652, 3659
+        - [x] **Batch 29** (Computer Hardware): 3693, 3701, 3706, 4916, 4924, 4938, 4967, 4973, 4977, 4987, 5215, 5271, 5289, 5310, 5386, 5410, 5465, 6117, 6161, 6166, 6188, 6197, 6199, 6206, 6228, 6277, 6414, 6485, 6570, 6579
+        - [x] **Batch 30** (Computer Hardware): 6591, 6599, 6669, 6680, 6737, 6755, 6805, 6825, 6884, 6922, 6928, 6933, 7711, 8032, 8050, 8054, 8071, 8076, 8088, 8093, 8119, 8210, 8234, 8455
+        - [x] **Batch 31** (Conglomerates): 1435, 2371, 2547, 2614, 3027, 5288, 6969
+        - [x] **Batch 32** (Consulting Services): 6754, 6881
+        - [x] **Batch 33** (Consumer Electronics): 2424, 2439, 2462, 2477, 2488, 2498, 3024, 3040, 3050, 3067, 3296, 3465, 3541, 3669, 4609, 4749, 4915, 5225, 5283, 5371, 5489, 6225, 6275, 6728, 6743, 6784, 8201
+        - [x] **Batch 34** (Copper): 2009, 4989
+        - [x] **Batch 35** (Credit Services): 5871, 6592, 6958, 9941
+        - [x] **Batch 36** (Department Stores): 2942, 5903, 5904
+        - [x] **Batch 37** (Drug Manufacturers - Specialty & Generic): 5398
+        - [x] **Batch 38** (Education & Training Services): 2496, 5481, 8437, 8489
+        - [x] **Batch 39** (Electrical Equipment & Parts): 1503, 1514, 1519, 1529, 1537, 1597, 1608, 1609, 1612, 1615, 1616, 1617, 1623, 2061, 2420, 2438, 2440, 2457, 2483, 2489, 3002, 3003, 3015, 3043, 3058, 3071, 3078, 3092, 3211, 3226
+        - [x] **Batch 40** (Electrical Equipment & Parts): 3290, 3308, 3323, 3332, 3432, 3484, 3501, 3504, 3537, 3550, 3617, 3625, 3628, 3665, 4523, 4576, 4588, 4931, 5013, 5227, 5488, 6109, 6115, 6121, 6133, 6164, 6282, 6290, 6292, 6409
+        - [x] **Batch 41** (Electrical Equipment & Parts): 6412, 6558, 6559, 6648, 6781, 6788, 6833, 6835, 6895, 6940, 7704, 7750, 7788, 8038, 8109, 8249
+        - [x] **Batch 42** (Electronic Components): 1582, 1815, 2308, 2313, 2316, 2317, 2327, 2328, 2355, 2359, 2367, 2368, 2374, 2375, 2383, 2392, 2393, 2402, 2409, 2413, 2428, 2429, 2431, 2459, 2460, 2466, 2472, 2478, 2484, 2486
+        - [x] **Batch 43** (Electronic Components): 2492, 3008, 3011, 3017, 3019, 3023, 3026, 3031, 3036, 3037, 3038, 3042, 3044, 3049, 3051, 3060, 3066, 3090, 3093, 3095, 3115, 3117, 3149, 3152, 3168, 3191, 3206, 3207, 3217, 3229
+        - [x] **Batch 44** (Electronic Components): 3230, 3236, 3276, 3285, 3294, 3305, 3310, 3311, 3321, 3322, 3338, 3354, 3357, 3362, 3390, 3416, 3426, 3441, 3455, 3481, 3492, 3511, 3520, 3523, 3526, 3533, 3543, 3548, 3585, 3591
+        - [x] **Batch 45** (Electronic Components): 3593, 3595, 3597, 3603, 3605, 3609, 3615, 3622, 3623, 3624, 3630, 3633, 3645, 3646, 3653, 3666, 3673, 3675, 3679, 3684, 3689, 3710, 3714, 3715, 3717, 4527, 4529, 4554, 4555, 4573
+        - [x] **Batch 46** (Electronic Components): 4729, 4909, 4927, 4933, 4935, 4939, 4942, 4943, 4956, 4958, 4960, 4974, 4976, 4995, 5220, 5228, 5230, 5243, 5244, 5248, 5251, 5254, 5284, 5291, 5315, 5321, 5328, 5345, 5355, 5356
+        - [x] **Batch 47** (Electronic Components): 5381, 5392, 5432, 5439, 5457, 5464, 5469, 5474, 5487, 5493, 6108, 6114, 6116, 6120, 6124, 6126, 6141, 6153, 6155, 6156, 6158, 6165, 6167, 6174, 6176, 6185, 6191, 6194, 6196, 6203
+        - [x] **Batch 48** (Electronic Components): 6204, 6205, 6207, 6209, 6210, 6213, 6217, 6224, 6226, 6230, 6246, 6269, 6272, 6274, 6276, 6283, 6284, 6405, 6407, 6418, 6432, 6442, 6449, 6456, 6474, 6498, 6512, 6517, 6538, 6560
+        - [x] **Batch 49** (Electronic Components): 6577, 6597, 6609, 6651, 6668, 6672, 6673, 6698, 6732, 6742, 6756, 6775, 6792, 6818, 6821, 6834, 6840, 6854, 6862, 6863, 6899, 6916, 6924, 6927, 6962, 6988, 7419, 7556, 7861, 8039
+        - [x] **Batch 50** (Electronic Components): 3128, 8042, 8043, 8046, 8049, 8069, 8074, 8080, 8085, 8103, 8104, 8105, 8111, 8121, 8147, 8155, 8163, 8171, 8183, 8213, 8215, 8240, 8291, 8358, 8499, 9912
+        - [x] **Batch 51** (Electronic Gaming & Multimedia): 3687, 4994, 5478, 6473, 6908
+        - [x] **Batch 52** (Electronics & Computer Distribution): 1603, 1618, 2347, 2354, 2450, 3010, 3033, 3048, 3224, 3232, 3287, 3312, 3325, 3360, 3483, 3528, 3540, 3702, 3709, 5434, 6118, 6123, 6140, 6150, 6154, 6189, 6227, 6259, 6265, 6761
+        - [x] **Batch 53** (Electronics & Computer Distribution): 6776, 8067, 8068, 8070, 8072
+        - [x] **Batch 54** (Engineering & Construction): 1472, 1594, 2072, 2404, 2514, 2515, 2516, 2530, 2535, 2543, 2546, 2597, 3018, 3052, 3313, 3521, 3703, 4113, 4550, 5511, 5515, 5516, 5519, 5521, 5531, 5536, 5547, 6122, 6139, 6179
+        - [x] **Batch 55** (Engineering & Construction): 6691, 6750, 6873, 6903, 7590, 8926, 9906, 9933, 9945
+        - [x] **Batch 56** (Entertainment): 5263, 6184, 6464, 6625, 8487
+        - [x] **Batch 57** (Farm Products): 1240, 6952, 8345
+        - [x] **Batch 58** (Financial Conglomerates): 2885
+        - [x] **Batch 59** (Food Distribution): 5902
+        - [x] **Batch 60** (Footwear & Accessories): 1340, 4303, 6768, 6890, 6965, 8404, 9802, 9904, 9910, 9950
+        - [x] **Batch 61** (Furnishings, Fixtures & Appliances): 1558, 1604, 1611, 1614, 1626, 1810, 2059, 2491, 2938, 3516, 4564, 4930, 4950, 4972, 6201, 6222, 6584, 6616, 6629, 6807, 6957, 8066, 8426, 8464, 8482, 9911, 9935
+        - [x] **Batch 62** (Gambling): 6536
+        - [x] **Batch 63** (Home Improvement Retail): 2948
+        - [x] **Batch 64** (Household & Personal Products): 1730, 1732, 1817, 3557, 6504, 6671, 7516, 8929, 8941, 9919
+        - [x] **Batch 65** (Industrial Distribution): 2373, 3114, 6192, 8374
+        - [x] **Batch 66** (Information Technology Services): 1416, 2453, 2468, 2471, 3147, 3158, 4953, 5209, 6112, 6214, 6221, 6614, 6697, 6751, 6811, 6906, 6997, 7765, 8099
+        - [x] **Batch 67** (Insurance - Diversified): 2816
+        - [x] **Batch 68** (Insurance - Life): 2867, 2881, 2882, 2883, 5859
+        - [x] **Batch 69** (Insurance - Property & Casualty): 2832, 2850, 2852
+        - [x] **Batch 70** (Insurance - Reinsurance): 2851
+        - [x] **Batch 71** (Insurance Brokers): 5878, 6028
+        - [x] **Batch 72** (Integrated Freight & Logistics): 1443, 2607, 2612, 2636, 2642, 2643, 5601, 5603, 5609
+        - [x] **Batch 73** (Internet Content & Information): 3085, 5278, 5287, 7551
+        - [x] **Batch 74** (Internet Retail): 2941, 2949, 8044, 8454, 8472, 8477
+        - [x] **Batch 75** (Leisure): 1432, 1515, 1526, 1593, 1598, 1736, 2762, 4536, 6670, 6804, 8033, 8442, 8462, 8467, 8924, 8928, 8933, 8938, 9914, 9921
+        - [x] **Batch 76** (Lodging): 2724, 5324
+        - [x] **Batch 77** (Lumber & Wood Production): 6655, 8444
+        - [x] **Batch 78** (Marine Shipping): 2603, 2605, 2606, 2609, 2611, 2613, 2615, 2617, 2637, 2641, 5608, 8367
+        - [x] **Batch 79** (Medical Devices): 3373
+        - [x] **Batch 80** (Metal Fabrication): 1343, 1532, 1569, 1584, 1586, 1589, 1785, 2067, 2415, 2474, 3303, 3376, 3631, 3663, 4502, 4534, 4538, 4545, 4553, 4561, 4569, 4912, 5223, 5426, 5460, 6235, 6859, 7702
+        - [x] **Batch 81** (Metal Fabrication): 9958
+        - [x] **Batch 82** (Oil & Gas Equipment & Services): 2904
+        - [x] **Batch 83** (Oil & Gas Refining & Marketing): 6505
+        - [x] **Batch 84** (Other Industrial Metals & Mining): 7610, 9927
+        - [x] **Batch 85** (Packaged Foods): 6578, 6968, 8905
+        - [x] **Batch 86** (Packaging & Containers): 1323, 2461, 3171, 3607, 4304, 8411, 8488, 9905, 9907, 9939
+        - [x] **Batch 87** (Personal Services): 5530
+        - [x] **Batch 88** (Pollution & Treatment Controls): 1535, 4556, 5292, 6641, 6723, 6823, 6894, 6944, 9955
+        - [x] **Batch 89** (Publishing): 6240
+        - [x] **Batch 90** (Railroads): 2633, 2640
+        - [x] **Batch 91** (Real Estate - Development): 1436, 1442, 1805, 1808, 2442, 2501, 2505, 2506, 2511, 2524, 2534, 2536, 2537, 2538, 2539, 2542, 2548, 2596, 2718, 2923, 3056, 3188, 3489, 4907, 5206, 5455, 5508, 5522, 5525, 5534
+        - [x] **Batch 92** (Real Estate - Development): 6171, 6177, 6186, 6212
+        - [x] **Batch 93** (Real Estate - Diversified): 1438, 2520, 2545, 5512, 6219, 9946
+        - [x] **Batch 94** (Real Estate Services): 1316, 1437, 1456, 2348, 2509, 2527, 2528, 2540, 3266, 3512, 4416, 5213, 5514, 5523, 5529, 5533, 6264, 9902, 9940
+        - [x] **Batch 95** (Recreational Vehicles): 1517, 8478, 8937
+        - [x] **Batch 96** (Scientific & Technical Instruments): 2360, 2423, 3030, 3059, 3306, 3499, 3587, 4549, 5309, 6516, 7558, 8182, 8289
+        - [x] **Batch 97** (Security & Protection Services): 2390, 3297, 3356, 3454, 5240, 5484, 6419, 6556, 7402, 9917, 9925
+        - [x] **Batch 98** (Semiconductor Equipment & Materials): 2302, 2338, 2351, 2369, 2441, 2455, 2481, 2493, 3016, 3028, 3035, 3041, 3055, 3081, 3131, 3150, 3189, 3265, 3413, 3444, 3450, 3467, 3490, 3532, 3551, 3563, 4760, 4991, 5222, 5272
+        - [x] **Batch 99** (Semiconductor Equipment & Materials): 5351, 5443, 5483, 6147, 6173, 6182, 6218, 6223, 6257, 6261, 6266, 6271, 6425, 6510, 6532, 6533, 6640, 6658, 6682, 6683, 6684, 6735, 6787, 6826, 6830, 6877, 6920, 6953, 7769, 8028
+        - [x] **Batch 100** (Semiconductor Equipment & Materials): 3178, 8064, 8110
+        - [x] **Batch 101** (Semiconductors): 2303, 2329, 2330, 2337, 2340, 2342, 2344, 2363, 2379, 2388, 2401, 2408, 2426, 2434, 2436, 2449, 2454, 2458, 3006, 3014, 3034, 3073, 3094, 3105, 3122, 3135, 3141, 3169, 3227, 3228
+        - [x] **Batch 102** (Semiconductors): 3234, 3257, 3259, 3260, 3264, 3268, 3288, 3289, 3317, 3339, 3372, 3374, 3437, 3438, 3443, 3527, 3529, 3530, 3531, 3545, 3556, 3567, 3581, 3583, 3588, 3592, 3661, 3680, 3707
+        - [x] **Batch 103** (Semiconductors): 3711, 3712, 4919, 4923, 4925, 4951, 4952, 4961, 4966, 4968, 4971, 4979, 5236, 5245, 5262, 5269, 5274, 5285, 5299, 5302, 5314, 5344, 5347, 5425, 5468, 5471, 6103, 6104, 6113, 6127
+        - [x] **Batch 104** (Semiconductors): 6129, 6138, 6168, 6198, 6202, 6229, 6233, 6237, 6239, 6243, 6270, 6278, 6291, 6411, 6415, 6423, 6435, 6441, 6451, 6488, 6494, 6515, 6525, 6526, 6531, 6548, 6552, 6568, 6573, 6588
+        - [x] **Batch 105** (Semiconductors): 6642, 6643, 6679, 6693, 6695, 6716, 6719, 6720, 6739, 6770, 6786, 6789, 6799, 6819, 6921, 6937, 7728, 7815, 8016, 8024, 8040, 8081, 8084, 8086, 8091, 8096, 8102, 8112, 8131, 8150
+        - [x] **Batch 106** (Semiconductors): 8162, 8227, 8261, 8271, 8277, 8299
+        - [x] **Batch 107** (Software - Application): 3570, 3632, 5201, 5202, 5203, 5205, 5210, 5211, 5403, 6231, 6486, 6590, 6738, 6874, 6882, 6902, 8284, 8416
+        - [x] **Batch 108** (Software - Infrastructure): 3555, 5212, 6035, 6462, 6565, 6689, 6690, 6741, 6752, 6763, 6791, 6870, 6878, 6925, 7547, 7721, 7722, 7749, 7819, 7823, 8298
+        - [x] **Batch 109** (Solar): 2406, 3576, 3686, 3691, 3713, 4582, 4934, 4949, 6244, 6443, 6477, 6692, 6839
+        - [x] **Batch 110** (Specialty Business Services): 5607, 6146, 6183, 6721, 6898, 7786, 8401, 8481, 8906, 8921, 9929
+        - [x] **Batch 111** (Specialty Chemicals): 1301, 1303, 1304, 1305, 1308, 1309, 1314, 1321, 1337, 1711, 1713, 1718, 1717, 1725, 1726, 1742, 2103, 2104, 2107, 2108, 3388, 3430, 3508, 3708, 4306, 4702, 4706, 4707, 4711, 4714, 4716
+        - [x] **Batch 112** (Specialty Chemicals): 4720, 4721, 4722, 4738, 4739, 4741, 4754, 4755, 4763, 4764, 4765, 4766, 4767, 4768, 4770, 4772, 4773, 5234, 5452, 6151, 6434, 6506, 6509, 6555, 6582, 6585, 6959, 7742, 8354, 8410
+        - [x] **Batch 113** (Specialty Chemicals): 8431, 8935
+        - [x] **Batch 114** (Specialty Industrial Machinery): 1504, 1513, 1528, 1530, 1531, 1539, 1540, 1580, 1583, 1590, 1595, 2070, 2233, 2236, 2250, 2421, 2464, 2467, 2476, 3167, 3219, 3284, 3379, 3402, 3485, 3498, 3518, 3580, 4431, 4506
+        - [x] **Batch 115** (Specialty Industrial Machinery): 4510, 4513, 4526, 4532, 4533, 4537, 4542, 4544, 4552, 4562, 4563, 4565, 4566, 4568, 4575, 4577, 4580, 4583, 4584, 4585, 4587, 4590, 5267, 6125, 6187, 6208, 6215, 6438, 6603, 6606
+        - [x] **Batch 116** (Specialty Industrial Machinery): 6613, 6618, 6639, 6654, 6664, 6667, 6706, 6725, 6727, 6793, 6812, 6829, 6831, 6909, 6982, 7730, 7795, 7828, 3616, 8027, 8047, 8092, 8383, 8421, 8996
+        - [x] **Batch 117** (Specialty Retail): 2430, 2616, 2937, 2947, 3045, 6195, 6281, 8433, 8927, 9937, 9960
+        - [x] **Batch 118** (Staffing & Employment Services): 3130
+        - [x] **Batch 119** (Steel): 1605, 2002, 2006, 2007, 2008, 2010, 2012, 2013, 2014, 2015, 2017, 2020, 2023, 2024, 2025, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035, 2038, 2064, 2069, 2073, 2211, 2221
+        - [x] **Batch 120** (Steel): 5009, 5014, 5016, 5538, 6248, 9957, 9962
+        - [x] **Batch 121** (Telecom Services): 2412, 4904, 6163, 6170, 6561
+        - [x] **Batch 122** (Textile Manufacturing): 1307, 1325, 1341, 1342, 1402, 1409, 1410, 1413, 1414, 1418, 1419, 1423, 1434, 1439, 1440, 1441, 1444, 1445, 1446, 1447, 1449, 1451, 1452, 1453, 1454, 1455, 1457, 1459, 1460, 1463
+        - [x] **Batch 123** (Textile Manufacturing): 1464, 1465, 1466, 1468, 1470, 1474, 1475, 4401, 4402, 4406, 4417, 4420, 4426, 4430, 4433, 4439, 4440, 4441, 4442, 5340, 5450, 5475, 6832, 8916, 9938, 9944
+        - [x] **Batch 124** (Thermal Coal): 1516
+        - [x] **Batch 125** (Tools & Accessories): 1527, 1538, 1541, 1560, 1570, 1591, 2022, 2049, 2063, 2065, 2066, 2071, 3004, 4540, 4560, 4571, 4999, 5007, 5011, 5015, 5498, 6234, 6705, 6855, 6904, 8021, 8349, 8415
+        - [x] **Batch 126** (Trucking): 2608, 5604
+        - [x] **Batch 128** (Utilities - Regulated Electric): 7740, 8931
+        - [x] **Batch 129** (Utilities - Regulated Gas): 8908, 8917, 9908, 9918, 9926, 9931
+        - [x] **Batch 130** (Utilities - Regulated Water): 6977
+        - [x] **Batch 131** (Utilities - Renewable): 6806, 6869, 6994, 7833, 8087
+        - [x] **Batch 132** (Waste Management): 6581, 6624, 6771, 6803, 6887, 6923, 6947, 6951, 7507, 7578, 8341, 8390, 8422, 8440, 8473, 8476
+- [/] Verification Phase <!-- id: 16 -->
+    - [x] **Unit Verification**: Verify `yfinance` raw data units (Ones vs Thousands) <!-- id: 17 -->
+    - [x] **Wikilinking**: Update enrichment to link key entities (e.g., `[[TSMC]]`) <!-- id: 18 -->

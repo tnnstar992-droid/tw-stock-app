@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+.DS_Store
+*.tmp
+*.log
+_temp_fix_*.py
+enrichment*.json
+.claude/settings.local.json
