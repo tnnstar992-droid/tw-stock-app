@@ -414,12 +414,32 @@ async function loadHistory(code) {
   if (instData && instData.code === code) renderInstChart();
 }
 
-const VAL_TIPS = {
-  'Forward P/E': '預估本益比 (Forward Price-to-Earnings)：股價 / 分析師預估未來 12 個月每股盈餘 (EPS)。反映市場對未來獲利成長的估值預期。',
-  'P/E (TTM)': '滾動本益比 (Trailing Twelve Months P/E)：股價 / 過去四季累計每股盈餘 (EPS)。最常用的歷史本益比指標。',
-  'P/S (TTM)': '市銷率 / 股價營收比 (Price-to-Sales TTM)：市值 / 過去四季營業收入。適合評估尚未穩定獲利或高成長期的科技/新創公司。',
-  'P/B': '股價淨值比 (Price-to-Book)：股價 / 每股淨資產。衡量股價是否偏離公司資產價值，常用於重資產或景氣循環股。',
-  'EV/EBITDA': '企業價值倍數 (Enterprise Value / EBITDA)：(市值 + 總負債 - 現金) / 未計利息、稅項、折舊及攤銷前利潤。消除資本結構與折舊政策差異，常用於跨國或跨資本結構之併購估值比較。'
+const FINANCIAL_TIPS = {
+  // 估值指標
+  'Forward P/E': '預估本益比 (Forward P/E)：當前股價 ÷ 分析師預估未來 12 個月每股盈餘 (EPS)。衡量市場對未來獲利成長的估值評價。',
+  'P/E (TTM)': '滾動本益比 (Trailing Twelve Months P/E)：當前股價 ÷ 過去四季累計每股盈餘 (EPS)。衡量以目前獲利水準買進該股票需多少年回本。',
+  'P/S (TTM)': '市銷率 / 股價營收比 (Price-to-Sales TTM)：企業市值 ÷ 過去四季營業收入。常用於評估高成長或尚未獲利的科技新創公司。',
+  'P/B': '股價淨值比 (Price-to-Book Ratio)：每股股價 ÷ 每股淨資產。用以衡量股價是否偏離公司的資產清算價值，常用於重資產或景氣循環股。',
+  'EV/EBITDA': '企業價值倍數 (Enterprise Value / EBITDA)：企業總價值 (市值 + 負債 - 現金) ÷ 稅息折舊及攤銷前利潤。消除資本結構與折舊政策差異，為跨國法人併購與跨市場估值核心指標。',
+
+  // 年度與季度關鍵財務數據
+  'Revenue': '營業收入 (Revenue)：企業銷售商品或提供服務所獲得的全部收入（尚未扣除成本與費用），又稱營業額或頂線 (Top-line)，反映業務擴張速度。',
+  'Gross Profit': '營業毛利 (Gross Profit)：營業收入扣除直接銷貨/生產成本 (COGS) 後的金額。計算公式：營業收入 - 營業成本。反映產品或服務的原始獲利空間。',
+  'Gross Margin (%)': '毛利率 (Gross Margin %)：毛利佔營業收入的比率。計算公式：(營業毛利 ÷ 營業收入) × 100%。代表產品技術含金量、品牌溢價與定價競爭力。',
+  'Selling & Marketing Exp': '銷售及行銷費用 (Selling & Marketing Expenses)：用於市場宣傳、廣告促銷、銷售團隊薪資及通路拓展開銷所產生的營運費用。',
+  'R&D Exp': '研發費用 (Research & Development Expenses)：投入於新產品技術開發、專利申請、先進製程升級與實驗所產生的支出，為科技半導體業核心競爭力。',
+  'General & Admin Exp': '一般及管理費用 (General & Administrative Expenses)：企業總部、行政後勤、法務人資及辦公室日常運作等管理部門所產生的經常性管理開銷。',
+  'Operating Income': '營業利益 (Operating Income / EBIT)：營業毛利扣除所有營業費用 (推銷、研發、管理費用) 後的本業獲利。計算公式：營業毛利 - 營業費用。反映公司本業的核心賺錢能力。',
+  'Operating Margin (%)': '營業利益率 (Operating Margin %)：營業利益佔營業收入的比率。計算公式：(營業利益 ÷ 營業收入) × 100%。衡量公司本業營運效率與成本控管能力。',
+  'Net Income': '稅後淨利 (Net Income)：營業利益加上營業外收支 (利息、匯兌、投資收益) 並扣除所得稅後的最終純益 (底線獲利 Bottom-line)。代表全體股東真正賺到的利潤。',
+  'Net Margin (%)': '淨利率 (Net Profit Margin %)：稅後純益佔營業收入的比率。計算公式：(稅後淨利 ÷ 營業收入) × 100%。反映企業每創造 100 元營收能留下多少實質利潤。',
+  'Op Cash Flow': '營業活動現金流 (Operating Cash Flow / CFO)：企業由日常營運活動實際流入的現金總額。若穩定高於稅後淨利，代表獲利品質優良、無呆帳或存貨積壓風險。',
+  'Investing Cash Flow': '投資活動現金流 (Cash Flow from Investing / CFI)：用於資本支出 (購建廠房與先進設備)、併購擴產或金融投資所產生的現金流動（積極擴產擴廠通常為負數）。',
+  'Financing Cash Flow': '籌資活動現金流 (Cash Flow from Financing / CFF)：借款融資、發行新股、償還債務、發放股利或買回庫藏股所產生的現金流入與流出。',
+  'CAPEX': '資本支出 (Capital Expenditures / CAPEX)：企業用於購置、擴建或升級廠房設備等固定資產的資金支出，是半導體與高科技製造業未來產能擴充的重要先行指標。',
+  'Free Cash Flow': '自由現金流 (Free Cash Flow / FCF)：營業現金流扣除資本支出後的剩餘現金。計算公式：營業活動現金流 - CAPEX。代表公司可自由支配、發放股利或投資的真實資金。',
+  'EBITDA': '稅息折舊及攤銷前利潤 (EBITDA)：營業利益加回折舊與攤銷費用。用以評估公司在純經營層面產生現金利潤的能力。',
+  'EPS': '每股盈餘 (Earnings Per Share)：稅後淨利除以在外流通股數。代表每一股所賺得的純益。'
 };
 
 async function loadReport(code) {
@@ -428,9 +448,10 @@ async function loadReport(code) {
   if (d.error) { $('report').innerHTML = d.error; return; }
   let md = d.markdown.replace(/\[\[([^\]]+)\]\]/g, (_, w) => `<a class="wl" data-kw="${w}">${w}</a>`);
   
-  // 為估值指標注入 tooltip 注釋
-  for (const [term, tip] of Object.entries(VAL_TIPS)) {
-    const escaped = term.replace(/([()\\\/])/g, '\\$1');
+  // 依字串長度由長至短排序，確保較長的詞（如 Gross Margin (%)）優先比對，避免被短詞截斷
+  const sortedTips = Object.entries(FINANCIAL_TIPS).sort((a, b) => b[0].length - a[0].length);
+  for (const [term, tip] of sortedTips) {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const reg = new RegExp(`(?<=[|\\s])(${escaped})(?=[|\\s])`, 'g');
     md = md.replace(reg, `<span class="tip-term" title="${tip}">$1</span>`);
   }
