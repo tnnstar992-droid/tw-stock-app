@@ -1131,26 +1131,42 @@ def market_vix():
     except Exception as e:
         print(f"美股 VIX 抓取失敗: {e}")
 
-    # 2. 臺指選擇權波動率 (VIXTWN)
+    # 2. 臺指選擇權波動率 (VIXTWN) - 台灣期交所 (TAIFEX) 官方每日公布數據
     try:
         s = requests.Session()
         s.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Referer": "https://www.taifex.com.tw/cht/7/vixMinNew",
         })
-        r = s.get("https://www.taifex.com.tw/cht/7/vixMinNew", timeout=10)
-        dates = re.findall(r"filesname=(\d{8})", r.text)
-        if len(dates) >= 2:
-            d_curr, d_prev = dates[0], dates[1]
-            r_curr = s.get(f"https://www.taifex.com.tw/cht/7/getVixData?filesname={d_curr}", timeout=10)
-            r_prev = s.get(f"https://www.taifex.com.tw/cht/7/getVixData?filesname={d_prev}", timeout=10)
-            lines_curr = [l.strip().split("\t") for l in r_curr.text.splitlines() if "\t" in l]
-            lines_prev = [l.strip().split("\t") for l in r_prev.text.splitlines() if "\t" in l]
-            curr_val = round(float(lines_curr[-2][-1]), 2)
-            prev_val = round(float(lines_prev[-2][-1]), 2)
+
+        def _fetch_month_vix(ym_str):
+            u = f"https://www.taifex.com.tw/file/taifex/Dailydownload/vix/log2data/{ym_str}new.txt"
+            resp = s.get(u, timeout=8)
+            if resp.status_code != 200 or "<title>404</title>" in resp.text.lower():
+                return []
+            content_lines = resp.content.decode("big5", errors="ignore").splitlines()
+            records = []
+            for l in content_lines:
+                parts = [p.strip() for p in l.split("\t") if p.strip()]
+                if parts and len(parts) >= 3 and parts[0].isdigit() and len(parts[0]) == 8:
+                    try:
+                        vix_num = float(parts[2])
+                        records.append((parts[0], vix_num))
+                    except ValueError:
+                        pass
+            return records
+
+        today = date.today()
+        cur_ym = today.strftime("%Y%m")
+        prev_dt = today.replace(day=1) - timedelta(days=1)
+        prev_ym = prev_dt.strftime("%Y%m")
+
+        tw_rows = _fetch_month_vix(prev_ym) + _fetch_month_vix(cur_ym)
+        if len(tw_rows) >= 2:
+            curr_dt, curr_val = tw_rows[-1]
+            prev_dt_val, prev_val = tw_rows[-2]
             chg = round(curr_val - prev_val, 2)
             pct = round((chg / prev_val) * 100, 2) if prev_val else 0.0
-            dt_str = f"{d_curr[:4]}-{d_curr[4:6]}-{d_curr[6:]}"
+            dt_str = f"{curr_dt[:4]}-{curr_dt[4:6]}-{curr_dt[6:]}"
             st, col, bg, border = _get_vix_status(curr_val)
             res["tw"] = {
                 "symbol": "VIXTWN",
@@ -1158,6 +1174,23 @@ def market_vix():
                 "close": curr_val,
                 "change": chg,
                 "pct": pct,
+                "date": dt_str,
+                "status": st,
+                "color": col,
+                "bg_color": bg,
+                "border_color": border,
+                "source": "台灣期交所 (TAIFEX)",
+            }
+        elif len(tw_rows) == 1:
+            curr_dt, curr_val = tw_rows[-1]
+            dt_str = f"{curr_dt[:4]}-{curr_dt[4:6]}-{curr_dt[6:]}"
+            st, col, bg, border = _get_vix_status(curr_val)
+            res["tw"] = {
+                "symbol": "VIXTWN",
+                "name": "臺指選擇權波動率 (VIXTWN)",
+                "close": curr_val,
+                "change": 0.0,
+                "pct": 0.0,
                 "date": dt_str,
                 "status": st,
                 "color": col,
