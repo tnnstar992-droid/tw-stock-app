@@ -27,6 +27,10 @@
   .settle-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px; }
   .settle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 8px; }
   .settle-col { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; }
+  .settle-scroll-list { max-height: 270px; overflow-y: auto; padding-right: 4px; }
+  .settle-scroll-list::-webkit-scrollbar { width: 5px; }
+  .settle-scroll-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  .settle-scroll-list::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   .settle-col h4 { margin: 0 0 6px 0; font-size: 13px; color: #334155; display: flex; justify-content: space-between; align-items: center; }
   .settle-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; font-size: 13px; gap: 6px; }
   .settle-item:last-child { border-bottom: none; }
@@ -121,12 +125,12 @@
         </div>
         <div id="usMarketBox" class="settle-grid">
           <div class="settle-col">
-            <h4><span>🏛️ 美國重大宏觀事件</span><span class="muted" style="font-size:11px;">FOMC / 通膨 / 就業</span></h4>
-            <div id="usMacroList" class="muted" style="font-size:13px; flex:1;">載入中…</div>
+            <h4><span>🏛️ 美國重大宏觀事件</span><span class="muted" style="font-size:11px;">FOMC / 通膨 / 就業 / 選舉</span></h4>
+            <div id="usMacroList" class="muted settle-scroll-list" style="font-size:13px; flex:1;">載入中…</div>
           </div>
           <div class="settle-col">
-            <h4><span>👑 科技巨頭 & 焦點半導體財報日</span><span class="muted" style="font-size:11px;">Mag 7 + AMD / Intel / 高通 / LITE</span></h4>
-            <div id="usMag7List" class="muted" style="font-size:13px; flex:1;">載入中…</div>
+            <h4><span>👑 科技巨頭 & 焦點半導體財報日</span><span class="muted" style="font-size:11px;">Mag 7 + AMD / Intel / 高通 / LITE (可滑動 ↕)</span></h4>
+            <div id="usMag7List" class="muted settle-scroll-list" style="font-size:13px; flex:1;">載入中…</div>
           </div>
         </div>
       </div>
