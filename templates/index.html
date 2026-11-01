@@ -117,7 +117,7 @@
       <div class="settle-bar us-market-card" style="border-left: 4px solid #1e3a5f;">
         <div class="settle-header">
           <h3 style="margin:0; font-size:15px;">🌐 美股近兩週重大事件 & 科技巨頭與焦點半導體財報預告</h3>
-          <span class="muted">FOMC、通膨、美國選舉、Mag 7 / AMD / 高通 / LITE 財報日程（同步標註台灣時間）</span>
+          <span class="muted">FOMC、通膨、美國選舉、Mag 7 / AMD / Intel / 高通 / LITE 財報日程（同步標註台灣時間）</span>
         </div>
         <div id="usMarketBox" class="settle-grid">
           <div class="settle-col">
@@ -125,7 +125,7 @@
             <div id="usMacroList" class="muted" style="font-size:13px; flex:1;">載入中…</div>
           </div>
           <div class="settle-col">
-            <h4><span>👑 科技巨頭 & 焦點半導體財報日</span><span class="muted" style="font-size:11px;">Mag 7 + AMD / 高通 / LITE</span></h4>
+            <h4><span>👑 科技巨頭 & 焦點半導體財報日</span><span class="muted" style="font-size:11px;">Mag 7 + AMD / Intel / 高通 / LITE</span></h4>
             <div id="usMag7List" class="muted" style="font-size:13px; flex:1;">載入中…</div>
           </div>
         </div>
@@ -1087,13 +1087,25 @@ async function loadEvents(code) {
       badgeBg = '#dcfce7'; badgeCol = '#15803d'; badgeBorder = '#86efac'; icon = '🟢';
     } else if (p.code === 'miss') {
       badgeBg = '#fee2e2'; badgeCol = '#b91c1c'; badgeBorder = '#fca5a5'; icon = '🔴';
+    } else if (p.code === 'info') {
+      badgeBg = '#f1f5f9'; badgeCol = '#475569'; badgeBorder = '#cbd5e1'; icon = 'ℹ️';
     }
     const surpSign = p.surprise_pct > 0 ? '+' : '';
     const surpText = p.surprise_pct != null ? ` (${surpSign}${p.surprise_pct}%)` : '';
     const details = [];
-    if (p.eps_actual != null) {
-      details.push(`實報 EPS \$${p.eps_actual}${p.eps_est != null ? ` (預期 \$${p.eps_est})` : ''}`);
+    if (p.mode === 'estimate') {
+      if (p.eps_actual != null) {
+        details.push(`實報 EPS \$${p.eps_actual}${p.eps_est != null ? ` (法人預估 \$${p.eps_est})` : ''}`);
+      }
+    } else if (p.mode === 'yoy') {
+      if (p.eps_actual != null) {
+        const prevText = p.eps_prev != null ? ` · 去年同期 \$${p.eps_prev}` : '';
+        details.push(`實報 EPS \$${p.eps_actual}${prevText}`);
+      }
+    } else if (p.eps_actual != null) {
+      details.push(`實報 EPS \$${p.eps_actual}`);
     }
+
     return `
       <div>
         <span class="badge" style="background:${badgeBg}; color:${badgeCol}; border:1px solid ${badgeBorder}; font-size:11px; padding:2px 7px; font-weight:700;">${icon} ${esc(p.status)}${surpText}</span>

@@ -655,32 +655,109 @@ def _calc_surprise_meta(actual, est, surp_pct=None):
         return None
 
 
+def _infer_quarter_from_date(dt):
+    """根據重大訊息公告日期推算所屬財報季度（遇無期別主旨時的智能備援）。"""
+    m, y = dt.month, dt.year
+    if m in (1, 2, 3):
+        return f"{y - 1} Q4", f"{y - 1} 年度"
+    elif m in (4, 5, 6):
+        return f"{y} Q1", None
+    elif m in (7, 8, 9):
+        return f"{y} Q2", None
+    else:
+        return f"{y} Q3", None
+
+
 def _get_tw_earnings_performance(code: str, typek: str = "sii"):
-    """取得台股過去各季財報 EPS 實報 vs 預期驚喜度（yfinance 共識）。"""
-    suffix = ".TW" if typek == "sii" else ".TWO"
-    sym = f"{code}{suffix}"
+    """取得台股過去各季財報表現（雙軌智能評估：第一軌法人共識預估值；第二軌 FinMind 官方庫同期 YoY 比較，100% 覆蓋所有台股）。"""
     perf_map = {}
+
+    # 1. 第一軌道：嘗試從 yfinance 取得外資/法人共識預估驚喜度（上市 .TW / 上櫃 .TWO 自動雙向容錯）
+    suffixes = [".TWO", ".TW"] if typek == "otc" else [".TW", ".TWO"]
+    for sfx in suffixes:
+        try:
+            t = yf.Ticker(f"{code}{sfx}")
+            eh = t.get_earnings_history()
+            if eh is not None and not eh.empty:
+                for idx, r in eh.iterrows():
+                    dt = getattr(idx, "date", lambda: idx)()
+                    dt_str = str(dt)[:10]
+                    parts = dt_str.split("-")
+                    yr, mo = int(parts[0]), int(parts[1])
+                    q = (mo - 1) // 3 + 1
+                    q_key = f"{yr} Q{q}"
+                    act = r.get("epsActual")
+                    est = r.get("epsEstimate")
+                    surp = r.get("surprisePercent")
+                    if act is not None and not (isinstance(act, float) and act != act):
+                        meta = _calc_surprise_meta(act, est, surp)
+                        if meta:
+                            meta["mode"] = "estimate"
+                            perf_map[q_key] = meta
+                            perf_map[f"{yr - 1911}年第{q}季"] = meta
+                            if q == 4:
+                                perf_map[f"{yr} 年度"] = meta
+                                perf_map[f"{yr - 1911}年度"] = meta
+                break
+        except Exception:
+            pass
+
+    # 2. 第二軌道：整合 FinMind 官方財報庫（填補無外資覆蓋之個股或歷史季度，以去年同期 YoY 評估）
     try:
-        t = yf.Ticker(sym)
-        eh = t.get_earnings_history()
-        if eh is not None and not eh.empty:
-            for idx, r in eh.iterrows():
-                dt = getattr(idx, "date", lambda: idx)()
-                dt_str = str(dt)[:10]
-                parts = dt_str.split("-")
-                yr, mo = int(parts[0]), int(parts[1])
+        today = date.today()
+        fs = finmind("TaiwanStockFinancialStatements", code, date(today.year - 3, 1, 1))
+        eps_items = [x for x in fs if x.get("type") == "EPS"]
+        by_q = {}
+        for x in eps_items:
+            d = x.get("date", "")
+            if len(d) >= 7:
+                parts = d.split("-")
+                yr = int(parts[0])
+                mo = int(parts[1])
                 q = (mo - 1) // 3 + 1
-                q_key = f"{yr} Q{q}"
-                act = r.get("epsActual")
-                est = r.get("epsEstimate")
-                surp = r.get("surprisePercent")
-                if act is not None and not (isinstance(act, float) and act != act):
-                    meta = _calc_surprise_meta(act, est, surp)
-                    if meta:
-                        perf_map[q_key] = meta
-                        perf_map[f"{yr - 1911}年第{q}季"] = meta
+                by_q[(yr, q)] = float(x["value"])
+
+        for (yr, q), val in by_q.items():
+            q_key = f"{yr} Q{q}"
+            roc_key = f"{yr - 1911}年第{q}季"
+
+            # 若第一軌道已有法人預估值，則保留
+            existing = perf_map.get(q_key)
+            if existing and existing.get("eps_est") is not None:
+                continue
+
+            prev_yr_val = by_q.get((yr - 1, q))
+            yoy = None
+            if prev_yr_val is not None and prev_yr_val != 0:
+                yoy = round(((val - prev_yr_val) / abs(prev_yr_val)) * 100, 1)
+
+            if yoy is not None:
+                if yoy > 5.0:
+                    status, scode = f"優於同期", "beat"
+                elif yoy < -5.0:
+                    status, scode = f"低於同期", "miss"
+                else:
+                    status, scode = f"持平同期", "meet"
+            else:
+                status, scode = "已公布", "info"
+
+            yoy_meta = {
+                "status": status,
+                "code": scode,
+                "mode": "yoy",
+                "eps_actual": round(val, 2),
+                "eps_prev": round(prev_yr_val, 2) if prev_yr_val is not None else None,
+                "yoy_pct": yoy,
+                "surprise_pct": yoy,
+            }
+            perf_map[q_key] = yoy_meta
+            perf_map[roc_key] = yoy_meta
+            if q == 4:
+                perf_map[f"{yr} 年度"] = yoy_meta
+                perf_map[f"{yr - 1911}年度"] = yoy_meta
     except Exception:
         pass
+
     return perf_map
 
 
@@ -719,6 +796,9 @@ def events(code):
             elif any(k in subject for k in ("通過", "決議", "承認")):
                 lbl = report_label(subject)
                 perf = tw_perf.get(lbl)
+                if not perf and ann_date:
+                    q_inf, yr_inf = _infer_quarter_from_date(ann_date)
+                    perf = tw_perf.get(q_inf) or (tw_perf.get(yr_inf) if yr_inf else None)
                 past_reports.append({"date": ann_date.isoformat(), "time": r[3][:5],
                                      "period": lbl, "title": subject, "performance": perf})
     past_reports.sort(key=lambda x: x["date"], reverse=True)
@@ -782,6 +862,7 @@ MAG7_MAP = {
     "AMD": "超微 (AMD)",
     "QCOM": "高通 (Qualcomm)",
     "LITE": "朗美通 (Lumentum)",
+    "INTC": "英特爾 (Intel)",
 }
 MAG7_SEARCH_QUERIES = {
     "AAPL": "stock:apple",
@@ -794,6 +875,7 @@ MAG7_SEARCH_QUERIES = {
     "AMD": "stock:amd",
     "QCOM": "stock:qualcomm",
     "LITE": "stock:lumentum",
+    "INTC": "stock:intel",
 }
 MAG7_PRICE_CACHE = CACHE_DIR / "mag7_price_cache.json"
 MAG7_PRICE_TTL = 15 * 60  # 股價快取 15 分鐘
@@ -953,7 +1035,7 @@ def us_market():
     is_expired = (now_ts - cache_ts > FMP_CACHE_TTL)
     if (is_expired or not raw_mag7) and FMP_API_KEY:
         try:
-            start_str = (today - timedelta(days=7)).isoformat()
+            start_str = (today - timedelta(days=21)).isoformat()
             end_str = (today + timedelta(days=45)).isoformat()
             url = f"https://financialmodelingprep.com/stable/earnings-calendar?from={start_str}&to={end_str}&apikey={FMP_API_KEY}"
             resp = requests.get(url, timeout=12).json()
