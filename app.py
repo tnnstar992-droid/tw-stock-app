@@ -711,6 +711,9 @@ MAG7_MAP = {
     "NVDA": "輝達 (NVIDIA)",
     "META": "Meta (臉書)",
     "TSLA": "特斯拉 (Tesla)",
+    "AMD": "超微 (AMD)",
+    "QCOM": "高通 (Qualcomm)",
+    "LITE": "朗美通 (Lumentum)",
 }
 MAG7_SEARCH_QUERIES = {
     "AAPL": "stock:apple",
@@ -720,6 +723,9 @@ MAG7_SEARCH_QUERIES = {
     "NVDA": "stock:nvidia",
     "META": "stock:meta",
     "TSLA": "stock:tesla",
+    "AMD": "stock:amd",
+    "QCOM": "stock:qualcomm",
+    "LITE": "stock:lumentum",
 }
 MAG7_PRICE_CACHE = CACHE_DIR / "mag7_price_cache.json"
 MAG7_PRICE_TTL = 15 * 60  # 股價快取 15 分鐘
@@ -814,6 +820,13 @@ US_MACRO_SCHEDULE = [
         "us_time": "10/30 08:30 美東",
     },
     {
+        "date": "2026-11-03",
+        "event": "🇺🇸 2026 美國期中選舉投票日 (參眾議院全面改選)",
+        "impact": "high",
+        "tw_time": "11/04 (三) 早上陸續開票",
+        "us_time": "11/03 全日投票",
+    },
+    {
         "date": "2026-11-06",
         "event": "美國 10 月非農就業報告 (NFP) / 失業率",
         "impact": "high",
@@ -897,7 +910,32 @@ def us_market():
         except Exception:
             pass  # API 達到上限、網路問題或 429 時，直接降級使用既有快取，絕不噴錯或重複請求
 
-    # 3. 取得 Mag 7 即時/收盤股價與動態計算剩餘天數
+    # 補充：若部分焦點權值股 (如 QCOM, LITE) 尚未在 FMP 財報日曆中出現，透過 yfinance 官方日程補充
+    existing_syms = {item.get("symbol") for item in raw_mag7}
+    for sym in ["AMD", "QCOM", "LITE"]:
+        if sym in MAG7_MAP and sym not in existing_syms:
+            try:
+                t = yf.Ticker(sym)
+                cal = t.calendar
+                ed = cal.get("Earnings Date") if isinstance(cal, dict) else None
+                if ed:
+                    d = ed[0] if isinstance(ed, list) else ed
+                    if hasattr(d, "date"):
+                        d = d.date()
+                    rev_avg = cal.get("Revenue Average")
+                    eps_avg = cal.get("Earnings Average")
+                    raw_mag7.append({
+                        "symbol": sym,
+                        "name": MAG7_MAP[sym],
+                        "date": d.isoformat(),
+                        "eps_est": round(float(eps_avg), 2) if eps_avg else None,
+                        "rev_est_b": round(float(rev_avg) / 1e9, 1) if rev_avg else None,
+                    })
+                    existing_syms.add(sym)
+            except Exception:
+                pass
+
+    # 3. 取得美股焦點科技股即時/收盤股價與動態計算剩餘天數
     prices_map = _fetch_mag7_prices()
     mag7_events = []
     for item in raw_mag7:

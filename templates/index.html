@@ -116,8 +116,8 @@
       </div>
       <div class="settle-bar us-market-card" style="border-left: 4px solid #1e3a5f;">
         <div class="settle-header">
-          <h3 style="margin:0; font-size:15px;">🌐 美股近兩週重大事件 & 科技七巨頭財報預告</h3>
-          <span class="muted">FOMC、通膨、Mag 7 財報日程（同步標註台灣時間）</span>
+          <h3 style="margin:0; font-size:15px;">🌐 美股近兩週重大事件 & 科技巨頭與焦點半導體財報預告</h3>
+          <span class="muted">FOMC、通膨、美國選舉、Mag 7 / AMD / 高通 / LITE 財報日程（同步標註台灣時間）</span>
         </div>
         <div id="usMarketBox" class="settle-grid">
           <div class="settle-col">
@@ -125,7 +125,7 @@
             <div id="usMacroList" class="muted" style="font-size:13px; flex:1;">載入中…</div>
           </div>
           <div class="settle-col">
-            <h4><span>👑 科技七巨頭 (Mag 7) 財報日</span><span class="muted" style="font-size:11px;">FMP 即時更新</span></h4>
+            <h4><span>👑 科技巨頭 & 焦點半導體財報日</span><span class="muted" style="font-size:11px;">Mag 7 + AMD / 高通 / LITE</span></h4>
             <div id="usMag7List" class="muted" style="font-size:13px; flex:1;">載入中…</div>
           </div>
         </div>
@@ -151,30 +151,12 @@
   <div class="card full">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
       <h3 style="margin:0">三大法人買賣超（近 20 交易日，單位：張）</h3>
-      <span class="muted" style="font-size:12px;">💡 股價走勢已標記：🎯 臺指月結算 · 🌏 富時結算 · 🏛️ 美國重大財經 · 📢 法說會 · 📋 財報 · 👑 七巨頭財報 (游標懸停即看事件詳情)</span>
+      <span class="muted" style="font-size:12px;">💡 股價走勢已標記：🎯 臺指月結算 · 🌏 富時結算 · 🏛️ 美國重大財經 (含選舉) · 📢 法說會 · 📋 財報 · 👑 焦點美股財報 (游標懸停即看事件詳情)</span>
     </div>
     <div id="instMsg" class="muted" style="margin:6px 0;">—</div>
     <div class="inst-layout">
       <div class="chart-container"><canvas id="instChart"></canvas></div>
       <div id="instTable" class="table-responsive" style="max-height:300px;"></div>
-    </div>
-  </div>
-  <div class="card full">
-    <h3 style="margin-top:0">🗓 財報日與法說會</h3>
-    <div id="evtMsg" class="muted">—</div>
-    <div id="evtBox" style="display:none">
-      <h4 class="fund-h">🔜 未來事件</h4>
-      <div id="evtUpcoming"></div>
-      <div class="fund-grid" style="margin-top:14px">
-        <div>
-          <h4 class="fund-h">過去財報公布日</h4>
-          <div id="evtReports" class="table-responsive" style="max-height:280px"></div>
-        </div>
-        <div>
-          <h4 class="fund-h">過去法說會（近 12 個月）</h4>
-          <div id="evtConfs" class="table-responsive" style="max-height:280px"></div>
-        </div>
-      </div>
     </div>
   </div>
   <div class="card full">
@@ -209,6 +191,24 @@
     </div>
     <div id="updLog"></div>
     <div id="report" class="muted">—</div>
+  </div>
+  <div class="card full">
+    <h3 style="margin-top:0">🗓 財報日與法說會</h3>
+    <div id="evtMsg" class="muted">—</div>
+    <div id="evtBox" style="display:none">
+      <h4 class="fund-h">🔜 未來事件</h4>
+      <div id="evtUpcoming"></div>
+      <div class="fund-grid" style="margin-top:14px">
+        <div>
+          <h4 class="fund-h">過去財報公布日</h4>
+          <div id="evtReports" class="table-responsive" style="max-height:280px"></div>
+        </div>
+        <div>
+          <h4 class="fund-h">過去法說會（近 12 個月）</h4>
+          <div id="evtConfs" class="table-responsive" style="max-height:280px"></div>
+        </div>
+      </div>
+    </div>
   </div>
   </div> <!-- end mainDashboard -->
 </main>
@@ -537,7 +537,7 @@ function getEventsForDate(dateStr) {
   if (globalMarketData && globalMarketData.mag7) {
     globalMarketData.mag7.forEach(m => {
       if (m.date === dateStr) {
-        evts.push({ type: 'mag7', icon: '👑', label: `Mag7: ${m.symbol} 財報`, detail: m.price ? `\$${m.price}` : '' });
+        evts.push({ type: 'mag7', icon: '👑', label: `美股焦點: ${m.symbol} 財報`, detail: m.price ? `\$${m.price}` : '' });
       }
     });
   }
@@ -860,10 +860,10 @@ async function loadUsMarket() {
           </div>
           <div style="margin-left:6px; flex-shrink:0;"><span class="badge ${badgeCls(x.days_left)}">${leftText(x.days_left)}</span></div>
         </div>`;
-    }).join('') : '<div class="muted">近期七巨頭無發布日程</div>';
+    }).join('') : '<div class="muted">近期焦點美股無發布日程</div>';
   } catch (err) {
     $('usMacroList').textContent = '美股資料載入異常';
-    $('usMag7List').textContent = '七巨頭日程載入異常';
+    $('usMag7List').textContent = '美股財報日程載入異常';
   }
 }
 loadUsMarket();
