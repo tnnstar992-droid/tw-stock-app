@@ -619,6 +619,71 @@ def next_legal_deadline(today: date, past_reports: list):
     return None, None
 
 
+
+def _calc_surprise_meta(actual, est, surp_pct=None):
+    """計算財報開出來後與市場預期的比較（優於預期、符合預期、低於預期）。"""
+    if actual is None:
+        return None
+    try:
+        act = float(actual)
+        e = float(est) if est is not None else None
+        if surp_pct is not None:
+            pct = round(float(surp_pct) * 100, 1)
+        elif e is not None and e != 0:
+            pct = round(((act - e) / abs(e)) * 100, 1)
+        else:
+            pct = None
+
+        if pct is not None:
+            if pct > 1.5:
+                status, scode = "優於預期", "beat"
+            elif pct < -1.5:
+                status, scode = "低於預期", "miss"
+            else:
+                status, scode = "符合預期", "meet"
+        else:
+            status, scode = "已公布", "info"
+
+        return {
+            "status": status,
+            "code": scode,
+            "eps_actual": round(act, 2),
+            "eps_est": round(e, 2) if e is not None else None,
+            "surprise_pct": pct,
+        }
+    except Exception:
+        return None
+
+
+def _get_tw_earnings_performance(code: str, typek: str = "sii"):
+    """取得台股過去各季財報 EPS 實報 vs 預期驚喜度（yfinance 共識）。"""
+    suffix = ".TW" if typek == "sii" else ".TWO"
+    sym = f"{code}{suffix}"
+    perf_map = {}
+    try:
+        t = yf.Ticker(sym)
+        eh = t.get_earnings_history()
+        if eh is not None and not eh.empty:
+            for idx, r in eh.iterrows():
+                dt = getattr(idx, "date", lambda: idx)()
+                dt_str = str(dt)[:10]
+                parts = dt_str.split("-")
+                yr, mo = int(parts[0]), int(parts[1])
+                q = (mo - 1) // 3 + 1
+                q_key = f"{yr} Q{q}"
+                act = r.get("epsActual")
+                est = r.get("epsEstimate")
+                surp = r.get("surprisePercent")
+                if act is not None and not (isinstance(act, float) and act != act):
+                    meta = _calc_surprise_meta(act, est, surp)
+                    if meta:
+                        perf_map[q_key] = meta
+                        perf_map[f"{yr - 1911}年第{q}季"] = meta
+    except Exception:
+        pass
+    return perf_map
+
+
 @app.route("/api/events/<code>")
 def events(code):
     """個股財報日與法說會：未來事件、過去財報日、過去法說日。"""
@@ -629,6 +694,7 @@ def events(code):
     typek = "otc" if info and info.market == "上櫃" else "sii"
     today = date.today()
     errors, upcoming, past_reports, past_confs = [], [], [], []
+    tw_perf = _get_tw_earnings_performance(code, typek)
 
     # 1) 重大訊息：董事會通過財報（過去） / 預計召開董事會審議財報（未來）
     for roc_year in (today.year - 1911 - 1, today.year - 1911):
@@ -651,8 +717,10 @@ def events(code):
                     upcoming.append({"date": meet.isoformat(), "type": "財報（董事會）",
                                      "title": subject, "note": f"{ann_date.isoformat()} 公告"})
             elif any(k in subject for k in ("通過", "決議", "承認")):
+                lbl = report_label(subject)
+                perf = tw_perf.get(lbl)
                 past_reports.append({"date": ann_date.isoformat(), "time": r[3][:5],
-                                     "period": report_label(subject), "title": subject})
+                                     "period": lbl, "title": subject, "performance": perf})
     past_reports.sort(key=lambda x: x["date"], reverse=True)
 
     # 2) 法說會：過去 12 個月 + 未來 2 個月（每月一次全市場查詢，全站共用快取）
@@ -894,12 +962,25 @@ def us_market():
                 for item in resp:
                     sym = item.get("symbol")
                     if sym in MAG7_MAP:
+                        eps_act = item.get("epsActual")
+                        eps_est = item.get("epsEstimated")
+                        rev_act = item.get("revenueActual")
+                        rev_est = item.get("revenueEstimated")
+                        perf = None
+                        if eps_act is not None:
+                            perf = _calc_surprise_meta(eps_act, eps_est)
+                            if perf:
+                                perf["rev_actual_b"] = round(float(rev_act) / 1e9, 1) if rev_act else None
+                                perf["rev_est_b"] = round(float(rev_est) / 1e9, 1) if rev_est else None
                         new_events.append({
                             "symbol": sym,
                             "name": MAG7_MAP[sym],
                             "date": item.get("date"),
-                            "eps_est": item.get("epsEstimated"),
-                            "rev_est_b": round(item.get("revenueEstimated") / 1e9, 1) if item.get("revenueEstimated") else None,
+                            "eps_actual": round(float(eps_act), 2) if eps_act is not None else None,
+                            "eps_est": round(float(eps_est), 2) if eps_est is not None else None,
+                            "rev_actual_b": round(float(rev_act) / 1e9, 1) if rev_act else None,
+                            "rev_est_b": round(float(rev_est) / 1e9, 1) if rev_est else None,
+                            "performance": perf,
                         })
                 if new_events:
                     raw_mag7 = new_events
@@ -948,8 +1029,12 @@ def us_market():
             sym = item.get("symbol", "")
             px_data = prices_map.get(sym)
             search_query = MAG7_SEARCH_QUERIES.get(sym, f"stock:{sym.lower()}")
+            perf = item.get("performance")
+            if not perf and item.get("eps_actual") is not None:
+                perf = _calc_surprise_meta(item["eps_actual"], item.get("eps_est"))
             mag7_events.append({
                 **item,
+                "performance": perf,
                 "days_left": diff,
                 "tw_time": tw_time,
                 "us_time": us_time,

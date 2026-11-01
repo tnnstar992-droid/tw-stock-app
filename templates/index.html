@@ -537,7 +537,7 @@ function getEventsForDate(dateStr) {
   if (globalMarketData && globalMarketData.mag7) {
     globalMarketData.mag7.forEach(m => {
       if (m.date === dateStr) {
-        evts.push({ type: 'mag7', icon: '👑', label: `美股焦點: ${m.symbol} 財報`, detail: m.price ? `\$${m.price}` : '' });
+        const perfStr = m.performance ? ` [${m.performance.status}]` : ''; evts.push({ type: 'mag7', icon: '👑', label: `美股焦點: ${m.symbol} 財報${perfStr}`, detail: m.price ? `\$${m.price}` : '' });
       }
     });
   }
@@ -557,7 +557,7 @@ function getEventsForDate(dateStr) {
     });
     (eventsData.past_reports || []).forEach(e => {
       if (e.date === dateStr) {
-        evts.push({ type: 'report', icon: '📋', label: `財報公布: ${e.period || ''}`, detail: e.time ? `(${e.time})` : '' });
+        const perfStr = e.performance ? ` [${e.performance.status}]` : ''; evts.push({ type: 'report', icon: '📋', label: `財報公布: ${e.period || ''}${perfStr}`, detail: e.time ? `(${e.time})` : '' });
       }
     });
   }
@@ -821,11 +821,31 @@ async function loadUsMarket() {
         <div style="margin-left:6px; flex-shrink:0;"><span class="badge ${badgeCls(x.days_left)}">${leftText(x.days_left)}</span></div>
       </div>`).join('') : '<div class="muted">近期無重大事件</div>';
 
-    // 2. 七巨頭財報
+    // 2. 焦點美股財報
     $('usMag7List').innerHTML = d.mag7.length ? d.mag7.map(x => {
       const extra = [];
-      if (x.eps_est !== null) extra.push(`EPS \$${x.eps_est}`);
-      if (x.rev_est_b) extra.push(`營收 \$${x.rev_est_b}B`);
+      let perfBadge = '';
+      if (x.performance) {
+        const p = x.performance;
+        let badgeBg = '#fef9c3', badgeCol = '#a16207', badgeBorder = '#fde047', icon = '🟡';
+        if (p.code === 'beat') {
+          badgeBg = '#dcfce7'; badgeCol = '#15803d'; badgeBorder = '#86efac'; icon = '🟢';
+        } else if (p.code === 'miss') {
+          badgeBg = '#fee2e2'; badgeCol = '#b91c1c'; badgeBorder = '#fca5a5'; icon = '🔴';
+        }
+        const surpSign = p.surprise_pct > 0 ? '+' : '';
+        const surpText = p.surprise_pct != null ? ` (${surpSign}${p.surprise_pct}%)` : '';
+        perfBadge = `<span class="badge" style="background:${badgeBg}; color:${badgeCol}; border:1px solid ${badgeBorder}; font-size:11px; padding:2px 7px; font-weight:700;">${icon} ${esc(p.status)}${surpText}</span>`;
+        if (x.eps_actual != null) {
+          extra.push(`實報 EPS \$${x.eps_actual}${x.eps_est != null ? ` (預期 \$${x.eps_est})` : ''}`);
+        }
+        if (x.rev_actual_b != null) {
+          extra.push(`營收 \$${x.rev_actual_b}B${x.rev_est_b != null ? ` (預期 \$${x.rev_est_b}B)` : ''}`);
+        }
+      } else {
+        if (x.eps_est !== null) extra.push(`預估 EPS \$${x.eps_est}`);
+        if (x.rev_est_b) extra.push(`預估營收 \$${x.rev_est_b}B`);
+      }
 
       // 股價與漲跌標籤 (美股慣例：漲紅/綠，台股習慣漲紅/跌綠)
       let priceHtml = '';
@@ -840,25 +860,29 @@ async function loadUsMarket() {
       }
 
       const googleUrl = x.google_url || `https://www.google.com/search?q=stock:${x.symbol.toLowerCase()}`;
+      const statusBadge = x.performance
+        ? `<span class="badge" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:11px; font-weight:600;">已公布</span>`
+        : `<span class="badge ${badgeCls(x.days_left)}">${leftText(x.days_left)}</span>`;
 
       return `
         <div class="settle-item" style="align-items:flex-start; padding:6px 0;">
           <div style="flex:1; min-width:0;">
-            <div style="display:flex; align-items:center; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
               <a href="${esc(googleUrl)}" target="_blank" rel="noopener noreferrer" title="開啟 Google 股價查詢" style="font-size:13px; font-weight:bold; color:#1d4ed8; text-decoration:none; display:inline-flex; align-items:center; gap:2px; border-bottom:1px dashed #93c5fd;">
                 ${esc(x.symbol)}
                 <span style="font-size:10px; opacity:0.8;">↗</span>
               </a>
-              <span class="muted" style="font-size:12px; margin-left:4px;">${esc(x.name.split(' ')[0])}</span>
+              <span class="muted" style="font-size:12px; margin-left:2px;">${esc(x.name.split(' ')[0])}</span>
               ${priceHtml}
-              ${extra.length ? `<span class="muted" style="font-size:11px; margin-left:6px;">(${extra.join(', ')})</span>` : ''}
+              ${perfBadge}
+              ${extra.length ? `<span class="muted" style="font-size:11px; margin-left:4px;">(${extra.join(' · ')})</span>` : ''}
             </div>
             <div style="font-size:11px; margin-top:3px; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
               ${x.tw_time ? `<span style="background:#e0f2fe; color:#0369a1; padding:1px 6px; border-radius:4px; font-weight:600;">🇹🇼 ${esc(x.tw_time)}</span>` : ''}
               <span class="muted">🇺🇸 ${esc(x.us_time || (x.date.slice(5).replace('-', '/') + ' 盤後'))}</span>
             </div>
           </div>
-          <div style="margin-left:6px; flex-shrink:0;"><span class="badge ${badgeCls(x.days_left)}">${leftText(x.days_left)}</span></div>
+          <div style="margin-left:6px; flex-shrink:0;">${statusBadge}</div>
         </div>`;
     }).join('') : '<div class="muted">近期焦點美股無發布日程</div>';
   } catch (err) {
@@ -1056,8 +1080,29 @@ async function loadEvents(code) {
     </div>`).join('') : '<p class="muted">目前沒有已公告的未來事件</p>';
 
   const pr = d.past_reports || [];
-  $('evtReports').innerHTML = pr.length ? `<table><tr><th>公布日</th><th>期別</th><th>公告主旨</th></tr>
-    ${pr.map(x => `<tr><td>${esc(x.date.replace(/-/g, '/'))}<div class="muted">${esc(x.time)}</div></td><td>${esc(x.period)}</td><td class="evt-cell">${esc(x.title)}</td></tr>`).join('')}</table>`
+  const renderPerfCell = p => {
+    if (!p) return '<span class="muted" style="font-size:11px;">—</span>';
+    let badgeBg = '#fef9c3', badgeCol = '#a16207', badgeBorder = '#fde047', icon = '🟡';
+    if (p.code === 'beat') {
+      badgeBg = '#dcfce7'; badgeCol = '#15803d'; badgeBorder = '#86efac'; icon = '🟢';
+    } else if (p.code === 'miss') {
+      badgeBg = '#fee2e2'; badgeCol = '#b91c1c'; badgeBorder = '#fca5a5'; icon = '🔴';
+    }
+    const surpSign = p.surprise_pct > 0 ? '+' : '';
+    const surpText = p.surprise_pct != null ? ` (${surpSign}${p.surprise_pct}%)` : '';
+    const details = [];
+    if (p.eps_actual != null) {
+      details.push(`實報 EPS \$${p.eps_actual}${p.eps_est != null ? ` (預期 \$${p.eps_est})` : ''}`);
+    }
+    return `
+      <div>
+        <span class="badge" style="background:${badgeBg}; color:${badgeCol}; border:1px solid ${badgeBorder}; font-size:11px; padding:2px 7px; font-weight:700;">${icon} ${esc(p.status)}${surpText}</span>
+        ${details.length ? `<div class="muted" style="font-size:11px; margin-top:3px;">${esc(details.join(' · '))}</div>` : ''}
+      </div>`;
+  };
+
+  $('evtReports').innerHTML = pr.length ? `<table><tr><th>公布日</th><th>期別</th><th style="min-width:130px;">財報表現 (實報 vs 預期)</th><th>公告主旨</th></tr>
+    ${pr.map(x => `<tr><td>${esc(x.date.replace(/-/g, '/'))}<div class="muted">${esc(x.time)}</div></td><td><b>${esc(x.period)}</b></td><td>${renderPerfCell(x.performance)}</td><td class="evt-cell">${esc(x.title)}</td></tr>`).join('')}</table>`
     : '<p class="muted">近兩年查無財報公告</p>';
 
   const pc = d.past_conferences || [];
